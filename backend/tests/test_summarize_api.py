@@ -115,3 +115,76 @@ def test_summarize_handles_malformed_llm_json(client_with_source):
         mock_client.messages.create.return_value = mock_msg
         r = client.post(f"/api/sources/{source_id}/summarize")
     assert r.status_code == 500
+
+
+def test_summarize_uses_chunking_when_forced(client_with_source):
+    """When CHUNK_SIZE is patched small, LLM is called once per chunk and results are merged."""
+    client, source_id = client_with_source
+    call_results = [
+        {
+            "research_question": "RQ from chunk 1",
+            "methods": "RCT", "data_basis": "100 patients",
+            "key_results": [{"claim": "Finding A", "evidence_text": "text A", "page_number": 1, "confidence": "high"}],
+            "limitations": "small sample", "relevance": "high", "uncertainty_notes": "",
+        },
+        {
+            "research_question": "RQ from chunk 2",
+            "methods": "RCT", "data_basis": "100 patients",
+            "key_results": [{"claim": "Finding B", "evidence_text": "text B", "page_number": 1, "confidence": "medium"}],
+            "limitations": "small sample", "relevance": "high", "uncertainty_notes": "",
+        },
+    ]
+    call_index = 0
+
+    def side_effect(**kwargs):
+        nonlocal call_index
+        result = call_results[call_index % len(call_results)]
+        call_index += 1
+        msg = MagicMock()
+        msg.content = [MagicMock(text=json.dumps(result))]
+        return msg
+
+    with patch("app.services.llm_service.llm_service._client") as mock_client:
+        mock_client.messages.create.side_effect = side_effect
+        import app.api.summarize as summarize_mod
+        original_chunk = summarize_mod.CHUNK_SIZE
+        summarize_mod.CHUNK_SIZE = 5  # force every page into its own chunk
+        try:
+            r = client.post(f"/api/sources/{source_id}/summarize")
+        finally:
+            summarize_mod.CHUNK_SIZE = original_chunk
+
+    assert r.status_code == 200
+    data = r.json()
+    # research_question comes from first chunk
+    assert data["research_question"] == "RQ from chunk 1"
+    # key_results merged from all chunks
+    results = json.loads(data["key_results"])
+    assert any(kr["claim"] == "Finding A" for kr in results)
+
+
+def test_summarize_auto_creates_findings(client_with_source):
+    """After summarization, Finding records should be auto-created from key_results."""
+    client, source_id = client_with_source
+    mock_summary = {
+        "research_question": "Does X cause Y?",
+        "methods": "RCT", "data_basis": "200 subjects",
+        "key_results": [
+            {"claim": "X causes Y", "evidence_text": "We found...", "page_number": 1, "confidence": "high"},
+            {"claim": "Y increases Z", "evidence_text": "Z rose by 10%", "page_number": 2, "confidence": "medium"},
+        ],
+        "limitations": "small", "relevance": "high", "uncertainty_notes": "",
+    }
+    mock_msg = MagicMock()
+    mock_msg.content = [MagicMock(text=json.dumps(mock_summary))]
+    with patch("app.services.llm_service.llm_service._client") as mock_client:
+        mock_client.messages.create.return_value = mock_msg
+        client.post(f"/api/sources/{source_id}/summarize")
+
+    r = client.get(f"/api/sources/{source_id}")
+    assert r.status_code == 200
+    findings = r.json()["findings"]
+    assert len(findings) == 2
+    claims = [f["claim"] for f in findings]
+    assert "X causes Y" in claims
+    assert "Y increases Z" in claims
