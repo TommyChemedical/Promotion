@@ -1,7 +1,7 @@
 import os
 import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from app.database import get_db
 from app.models import Source, DocumentText, SourceTag, Tag, Finding, Note
 from app.schemas import SourceRead, SourceDetail, FindingCreate, FindingRead, NoteCreate, NoteRead, TagCreate
@@ -61,7 +61,18 @@ def list_sources(db: Session = Depends(get_db)):
 
 @router.get("/{source_id}", response_model=SourceDetail)
 def get_source(source_id: int, db: Session = Depends(get_db)):
-    source = db.get(Source, source_id)
+    source = (
+        db.query(Source)
+        .options(
+            selectinload(Source.texts),
+            selectinload(Source.summaries),
+            selectinload(Source.findings),
+            selectinload(Source.notes),
+            selectinload(Source.source_tags).selectinload(SourceTag.tag),
+        )
+        .filter(Source.id == source_id)
+        .first()
+    )
     if not source:
         raise HTTPException(404, "Quelle nicht gefunden")
     return _source_to_detail(source)
