@@ -109,3 +109,27 @@ def test_export_empty_db():
         md = export_to_markdown(db)
     assert "title" in csv.lower()  # header still present
     assert isinstance(md, str)
+
+
+def test_csv_sanitizes_formula_injection():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        src = Source(
+            title="=CMD('malicious')",
+            authors="+dangerous",
+            year=2024,
+            filename="evil.pdf",
+            file_path="/tmp/evil.pdf",
+        )
+        db.add(src)
+        db.commit()
+        csv = export_to_csv(db)
+    assert "'=CMD" in csv          # sanitized: prefixed with single quote
+    assert "'+dangerous" in csv   # sanitized: prefixed with single quote
+    # raw formula triggers must not appear as the first character of a field
+    for line in csv.splitlines()[1:]:  # skip header
+        for field in line.split(","):
+            field = field.strip('"')
+            assert not (field and field[0] in "=+-@"), f"Unsanitized field: {field!r}"

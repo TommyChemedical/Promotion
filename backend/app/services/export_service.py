@@ -4,6 +4,15 @@ import json
 from sqlalchemy.orm import Session
 from app.models import Source
 
+_FORMULA_TRIGGERS = frozenset("=+-@\t\r")
+
+
+def _sanitize_csv(value: object) -> str:
+    s = str(value) if value is not None else ""
+    if s and s[0] in _FORMULA_TRIGGERS:
+        return "'" + s
+    return s
+
 
 def export_to_csv(db: Session) -> str:
     sources = db.query(Source).all()
@@ -13,14 +22,14 @@ def export_to_csv(db: Session) -> str:
     for src in sources:
         tags = ",".join(st.tag.name for st in src.source_tags)
         writer.writerow([
-            src.id,
-            src.title,
-            src.authors or "",
-            src.year or "",
-            src.doi or "",
-            src.journal or "",
-            tags,
-            src.filename,
+            src.id,                        # integer, no sanitization needed
+            _sanitize_csv(src.title),
+            _sanitize_csv(src.authors or ""),
+            src.year or "",                # integer, no sanitization needed
+            _sanitize_csv(src.doi or ""),
+            _sanitize_csv(src.journal or ""),
+            _sanitize_csv(tags),
+            _sanitize_csv(src.filename),
         ])
     return buf.getvalue()
 
