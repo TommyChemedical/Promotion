@@ -32,10 +32,11 @@ export function UploadForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="pdf-upload" className="block text-sm font-medium text-gray-700 mb-1">
           PDF-Datei auswählen
         </label>
         <input
+          id="pdf-upload"
           type="file"
           accept=".pdf"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
