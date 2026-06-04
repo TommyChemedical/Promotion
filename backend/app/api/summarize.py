@@ -48,6 +48,8 @@ def _build_chunks(texts: list, max_chars: int) -> list[str]:
             current_size += len(part)
     if current_parts:
         chunks.append("\n\n".join(current_parts))
+    if len(chunks) > MAX_CHUNKS:
+        logger.warning("Source text exceeded MAX_CHUNKS=%d; %d chunk(s) dropped", MAX_CHUNKS, len(chunks) - MAX_CHUNKS)
     return chunks[:MAX_CHUNKS]
 
 
@@ -80,6 +82,10 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
     )
     if not texts:
         raise HTTPException(400, "Kein extrahierter Text vorhanden")
+
+    # Delete existing summary and findings before re-summarizing
+    db.query(Summary).filter_by(source_id=source_id).delete()
+    db.query(Finding).filter_by(source_id=source_id).delete()
 
     chunks = _build_chunks(texts, CHUNK_SIZE)
     template = _load_prompt(SUMMARY_VERSION)
