@@ -1,5 +1,9 @@
+import logging
+
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+
+logger = logging.getLogger(__name__)
 
 
 def index_document_text(engine: Engine, rowid: int, content: str, source_id: int, page_number: int) -> None:
@@ -25,5 +29,6 @@ def search_fulltext(engine: Engine, query: str, limit: int = 50) -> list[dict]:
                 {"q": query, "limit": limit},
             ).fetchall()
         return [{"source_id": r.source_id, "page_number": r.page_number, "snippet": r.snippet} for r in rows]
-    except Exception:
+    except Exception as e:
+        logger.warning("FTS search failed for query %r: %s", query, e)
         return []

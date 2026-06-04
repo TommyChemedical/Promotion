@@ -93,3 +93,13 @@ def test_index_multiple_pages(db_engine):
     results = search_fulltext(db_engine, "beta")
     assert len(results) == 1
     assert results[0]["page_number"] == 2
+
+
+def test_search_logs_error_on_bad_query(db_with_indexed_source, caplog):
+    """Malformed FTS query should log a warning and return []."""
+    import logging
+    engine, _ = db_with_indexed_source
+    with caplog.at_level(logging.WARNING, logger="app.services.search_service"):
+        results = search_fulltext(engine, '"unclosed_quote')
+    assert results == []
+    assert len(caplog.records) >= 1
