@@ -40,6 +40,13 @@ def test_run_sends_correct_message_structure(mock_client):
     assert kwargs["max_tokens"] >= 1024
 
 
+def test_run_wraps_api_errors(mock_client):
+    mock_client.messages.create.side_effect = Exception("rate limit")
+    svc = LLMService(client=mock_client, fast_model="haiku-test", deep_model="sonnet-test")
+    with pytest.raises(RuntimeError, match="LLM-Anfrage fehlgeschlagen"):
+        svc.run("prompt", ModelTier.FAST, task_type="tags", prompt_version="tags_v1")
+
+
 def test_llm_service_module_level_instance_exists():
     from app.services.llm_service import llm_service
     assert llm_service is not None
