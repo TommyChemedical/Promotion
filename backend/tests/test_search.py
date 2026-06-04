@@ -1,4 +1,5 @@
 import io
+import logging
 import fitz
 import pytest
 from sqlalchemy import create_engine, text
@@ -97,7 +98,6 @@ def test_index_multiple_pages(db_engine):
 
 def test_search_logs_error_on_bad_query(db_with_indexed_source, caplog):
     """Malformed FTS query should log a warning and return []."""
-    import logging
     engine, _ = db_with_indexed_source
     with caplog.at_level(logging.WARNING, logger="app.services.search_service"):
         results = search_fulltext(engine, '"unclosed_quote')
