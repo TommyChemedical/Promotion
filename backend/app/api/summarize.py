@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -6,6 +7,9 @@ from app.database import get_db
 from app.models import Source, Summary, LLMRun, DocumentText
 from app.schemas import SummaryRead
 from app.services.llm_service import llm_service, ModelTier
+
+logger = logging.getLogger(__name__)
+MAX_PROMPT_CHARS = 12_000
 
 router = APIRouter(prefix="/api/sources", tags=["summarize"])
 
@@ -46,7 +50,13 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
         raise HTTPException(400, "Kein extrahierter Text vorhanden")
 
     template = _load_prompt(SUMMARY_VERSION)
-    prompt = template.replace("{text}", full_text[:12000])
+    truncated = full_text[:MAX_PROMPT_CHARS]
+    if len(full_text) > MAX_PROMPT_CHARS:
+        logger.warning(
+            "Source %d: text truncated from %d to %d chars for LLM prompt",
+            source_id, len(full_text), MAX_PROMPT_CHARS,
+        )
+    prompt = template.replace("{text}", truncated)
 
     try:
         raw = llm_service.run(prompt, ModelTier.DEEP, task_type="summarize", prompt_version=SUMMARY_VERSION)
@@ -60,7 +70,7 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
 
     summary = Summary(
         source_id=source_id,
-        model_name=llm_service._deep_model,
+        model_name=llm_service.model_name_for_tier(ModelTier.DEEP),
         prompt_version=SUMMARY_VERSION,
         research_question=data.get("research_question", ""),
         methods=data.get("methods", ""),
@@ -75,7 +85,7 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
     run = LLMRun(
         source_id=source_id,
         task_type="summarize",
-        model_name=llm_service._deep_model,
+        model_name=llm_service.model_name_for_tier(ModelTier.DEEP),
         prompt_version=SUMMARY_VERSION,
         prompt=prompt[:5000],
         output_json=raw[:10000],

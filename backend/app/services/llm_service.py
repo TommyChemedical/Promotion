@@ -24,6 +24,9 @@ class LLMService:
         self._fast_model = fast_model or settings.anthropic_model_fast
         self._deep_model = deep_model or settings.anthropic_model_deep
 
+    def model_name_for_tier(self, tier: ModelTier) -> str:
+        return self._fast_model if tier == ModelTier.FAST else self._deep_model
+
     def run(self, prompt: str, tier: ModelTier, task_type: str, prompt_version: str) -> str:
         model = self._fast_model if tier == ModelTier.FAST else self._deep_model
         try:

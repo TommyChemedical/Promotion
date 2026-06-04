@@ -51,3 +51,9 @@ def test_llm_service_module_level_instance_exists():
     from app.services.llm_service import llm_service
     assert llm_service is not None
     assert isinstance(llm_service, LLMService)
+
+
+def test_model_name_for_tier(mock_client):
+    svc = LLMService(client=mock_client, fast_model="haiku-test", deep_model="sonnet-test")
+    assert svc.model_name_for_tier(ModelTier.FAST) == "haiku-test"
+    assert svc.model_name_for_tier(ModelTier.DEEP) == "sonnet-test"
