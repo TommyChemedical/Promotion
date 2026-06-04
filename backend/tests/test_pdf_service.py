@@ -44,3 +44,30 @@ def test_empty_pdf_returns_empty_list():
     buf.seek(0)
     pages = extract_text_from_pdf(buf.read())
     assert pages == []
+
+
+def test_extract_doi_from_text():
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Title: Test Paper\nDOI: 10.1038/nature12345\nAbstract: ...")
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    meta = extract_metadata_from_pdf(buf.read())
+    assert meta["doi"] == "10.1038/nature12345"
+
+
+def test_extract_doi_from_url_form():
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text((50, 50), "Available at https://doi.org/10.1016/j.cell.2023.01.001")
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    meta = extract_metadata_from_pdf(buf.read())
+    assert meta["doi"] == "10.1016/j.cell.2023.01.001"
+
+
+def test_no_doi_returns_empty_string(sample_pdf_bytes):
+    meta = extract_metadata_from_pdf(sample_pdf_bytes)
+    assert meta["doi"] == ""
