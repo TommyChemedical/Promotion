@@ -1,6 +1,7 @@
 import os
 import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db, engine
 from app.models import Source, DocumentText, SourceTag, Tag, Finding, Note
@@ -91,6 +92,10 @@ def delete_source(source_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Quelle nicht gefunden")
     if os.path.exists(source.file_path):
         os.remove(source.file_path)
+    # Remove FTS entries for this source
+    with engine.connect() as conn:
+        conn.execute(sql_text("DELETE FROM document_text_fts WHERE source_id = :sid"), {"sid": source_id})
+        conn.commit()
     db.delete(source)
     db.commit()
     return {"ok": True}

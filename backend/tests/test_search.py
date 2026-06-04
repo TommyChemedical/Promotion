@@ -60,6 +60,23 @@ def test_search_returns_empty_for_no_match(db_with_indexed_source):
     assert results == []
 
 
+def test_delete_removes_fts_entries(db_with_indexed_source):
+    engine, source_id = db_with_indexed_source
+    # Verify it's indexed
+    results = search_fulltext(engine, "photosynthesis")
+    assert len(results) == 1
+
+    # Delete from FTS
+    from sqlalchemy import text as sql_text
+    with engine.connect() as conn:
+        conn.execute(sql_text("DELETE FROM document_text_fts WHERE source_id = :sid"), {"sid": source_id})
+        conn.commit()
+
+    # Should not find it anymore
+    results = search_fulltext(engine, "photosynthesis")
+    assert results == []
+
+
 def test_index_multiple_pages(db_engine):
     Session = sessionmaker(bind=db_engine)
     with Session() as db:
