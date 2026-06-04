@@ -13,7 +13,8 @@ venv/
 
 # DB & uploads
 *.db
-backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Node
 node_modules/
