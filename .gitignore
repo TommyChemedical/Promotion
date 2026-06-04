@@ -6,9 +6,12 @@ venv/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+.coverage
+htmlcov/
 
 # Env
 .env
+.env.*
 *.env
 
 # DB & uploads
@@ -20,6 +23,13 @@ backend/uploads/*
 node_modules/
 .next/
 frontend/.env.local
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+*.log
 
 # OS
 .DS_Store
