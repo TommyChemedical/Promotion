@@ -13,23 +13,31 @@ from app.models import Base
 def client(tmp_path, monkeypatch):
     # Use a shared connection so all sessions see the same in-memory DB
     from sqlalchemy import StaticPool
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(test_engine)
     # FTS table
-    with engine.connect() as conn:
+    with test_engine.connect() as conn:
         conn.execute(text("CREATE VIRTUAL TABLE IF NOT EXISTS document_text_fts USING fts5(text, source_id UNINDEXED, page_number UNINDEXED)"))
         conn.commit()
-    Session = sessionmaker(bind=engine)
+    Session = sessionmaker(bind=test_engine)
 
     def override_db():
         with Session() as session:
             yield session
 
     app.dependency_overrides[get_db] = override_db
+
+    # Patch the engine used by sources and search modules so FTS indexing and
+    # search queries hit the same in-memory DB as the ORM session.
+    import app.api.sources as sources_mod
+    import app.api.search as search_mod
+    monkeypatch.setattr(sources_mod, "engine", test_engine)
+    monkeypatch.setattr(search_mod, "engine", test_engine)
+
     from app import config
     monkeypatch.setattr(config.settings, "upload_dir", str(tmp_path))
     with TestClient(app) as c:
@@ -105,3 +113,15 @@ def test_add_note(client, pdf_bytes):
     assert r2.status_code == 200
     r3 = client.get(f"/api/sources/{source_id}")
     assert any(n["text"] == "Important finding!" for n in r3.json()["notes"])
+
+
+def test_search_endpoint(client, pdf_bytes):
+    # Upload a PDF with known text
+    client.post("/api/sources/upload", files={"file": ("paper.pdf", pdf_bytes, "application/pdf")})
+
+    # Search for text we know is in the PDF ("science" is in the fixture PDF text)
+    r = client.get("/api/search?q=science")
+    assert r.status_code == 200
+    results = r.json()
+    assert len(results) >= 1
+    assert results[0]["source_id"] is not None

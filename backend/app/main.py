@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import sources as sources_router
+from app.api import search as search_router
 
 app = FastAPI(title="LiteraturKI", version="0.1.0")
 
@@ -12,6 +13,7 @@ app.add_middleware(
 )
 
 app.include_router(sources_router.router)
+app.include_router(search_router.router)
 
 
 @app.on_event("startup")

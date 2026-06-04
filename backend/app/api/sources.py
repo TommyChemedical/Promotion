@@ -2,10 +2,11 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session, selectinload
-from app.database import get_db
+from app.database import get_db, engine
 from app.models import Source, DocumentText, SourceTag, Tag, Finding, Note
 from app.schemas import SourceRead, SourceDetail, FindingCreate, FindingRead, NoteCreate, NoteRead, TagCreate
 from app.services.pdf_service import extract_text_from_pdf, extract_metadata_from_pdf
+from app.services.search_service import index_document_text
 from app.config import settings
 
 router = APIRouter(prefix="/api/sources", tags=["sources"])
@@ -50,6 +51,11 @@ async def upload_source(file: UploadFile = File(...), db: Session = Depends(get_
 
     db.commit()
     db.refresh(source)
+
+    # Index text for FTS search
+    for page_text in source.texts:
+        index_document_text(engine, page_text.id, page_text.text, source.id, page_text.page_number)
+
     return _source_to_read(source)
 
 
