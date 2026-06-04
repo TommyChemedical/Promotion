@@ -11,6 +11,12 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def startup():
+    from app.database import init_db
+    init_db()
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
