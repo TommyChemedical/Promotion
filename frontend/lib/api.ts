@@ -174,6 +174,13 @@ export interface MatrixRow {
   notes_count: number;
   created_at: string | null;
   updated_at: string | null;
+  research_areas: Array<{
+    research_area_id: number;
+    title: string;
+    area_type: string;
+    relevance: string;
+    relation_type: string;
+  }>;
 }
 
 export interface MatrixResponse {
@@ -199,6 +206,98 @@ export interface MatrixFilters {
   sort_order?: "asc" | "desc";
   limit?: number;
   offset?: number;
+  research_area_id?: number;
+  relation_type?: string;
+  relevance?: string;
+}
+
+// --- Research Map types ---
+
+export type AreaType =
+  | "research_question" | "chapter" | "theme" | "argument"
+  | "method" | "theory" | "literature_gap" | "other";
+
+export type RelevanceValue = "central" | "useful" | "marginal" | "context_only" | "do_not_use";
+
+export type RelationType =
+  | "supports" | "contradicts" | "differentiates" | "defines"
+  | "method" | "theory" | "evidence" | "limitation"
+  | "research_gap" | "background" | "other";
+
+export interface ResearchArea {
+  id: number;
+  title: string;
+  description: string;
+  area_type: AreaType;
+  parent_id: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchAreaFindingEntry {
+  link_id: number;
+  finding_id: number;
+  relevance: RelevanceValue;
+  relation_type: RelationType;
+  user_comment: string;
+  claim: string;
+  evidence_quote: string;
+  evidence_text: string;
+  page_start: number | null;
+  page_end: number | null;
+  confidence: string;
+  validation_status: string;
+  validation_method: string;
+  finding_review_status: string;
+  finding_review_comment: string;
+  source_id: number;
+  source_title: string;
+  authors: string;
+  year: number | null;
+  doi: string;
+  tags: string[];
+  summary_short: string | null;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface TopSourceEntry {
+  source_id: number;
+  source_title: string;
+  authors: string;
+  year: number | null;
+  finding_count: number;
+}
+
+export interface ResearchAreaOverview {
+  area_id: number;
+  area_title: string;
+  area_type: AreaType;
+  count_findings_total: number;
+  count_findings_correct: number;
+  count_findings_partially_correct: number;
+  count_findings_unreviewed: number;
+  count_evidence_found: number;
+  count_evidence_missing: number;
+  count_sources: number;
+  relation_type_counts: Record<string, number>;
+  relevance_counts: Record<string, number>;
+  top_sources: TopSourceEntry[];
+  gaps: string[];
+}
+
+export interface FindingAssignPayload {
+  finding_id: number;
+  relevance: RelevanceValue;
+  relation_type: RelationType;
+  user_comment?: string;
+}
+
+export interface FindingAssignUpdatePayload {
+  relevance?: RelevanceValue;
+  relation_type?: RelationType;
+  user_comment?: string;
 }
 
 // --- Token stats ---
@@ -298,6 +397,9 @@ export const api = {
       if (filters.sort_order) params.set("sort_order", filters.sort_order);
       if (filters.limit != null) params.set("limit", String(filters.limit));
       if (filters.offset != null) params.set("offset", String(filters.offset));
+      if (filters.research_area_id != null) params.set("research_area_id", String(filters.research_area_id));
+      if (filters.relation_type) params.set("relation_type", filters.relation_type);
+      if (filters.relevance) params.set("relevance", filters.relevance);
     }
     const qs = params.toString();
     return req<MatrixResponse>(`/api/matrix${qs ? `?${qs}` : ""}`);
@@ -320,4 +422,59 @@ export const api = {
     const qs = params.toString();
     return `${BASE}/api/matrix/export.${format}${qs ? `?${qs}` : ""}`;
   },
+
+  // Research Map
+  listResearchAreas: () => req<ResearchArea[]>("/api/research-areas"),
+  createResearchArea: (body: {
+    title: string; description?: string; area_type: AreaType;
+    parent_id?: number; sort_order?: number;
+  }) => req<ResearchArea>("/api/research-areas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }),
+  updateResearchArea: (id: number, body: Partial<{ title: string; description: string; area_type: AreaType; parent_id: number | null; sort_order: number }>) =>
+    req<ResearchArea>(`/api/research-areas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  deleteResearchArea: (id: number) =>
+    req<{ ok: boolean }>(`/api/research-areas/${id}`, { method: "DELETE" }),
+  getResearchArea: (id: number) => req<ResearchArea>(`/api/research-areas/${id}`),
+  getResearchAreaOverview: (id: number) =>
+    req<ResearchAreaOverview>(`/api/research-areas/${id}/overview`),
+  listAreaFindings: (
+    areaId: number,
+    params?: { include_unreviewed?: boolean; review_status?: string;
+               validation_status?: string; relation_type?: string; relevance?: string }
+  ) => {
+    const qs = new URLSearchParams();
+    if (params?.include_unreviewed != null)
+      qs.set("include_unreviewed", String(params.include_unreviewed));
+    if (params?.review_status) qs.set("review_status", params.review_status);
+    if (params?.validation_status) qs.set("validation_status", params.validation_status);
+    if (params?.relation_type) qs.set("relation_type", params.relation_type);
+    if (params?.relevance) qs.set("relevance", params.relevance);
+    const q = qs.toString();
+    return req<ResearchAreaFindingEntry[]>(
+      `/api/research-areas/${areaId}/findings${q ? `?${q}` : ""}`
+    );
+  },
+  assignFinding: (areaId: number, body: FindingAssignPayload) =>
+    req<ResearchAreaFindingEntry>(`/api/research-areas/${areaId}/findings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  updateFindingAssignment: (areaId: number, findingId: number, body: FindingAssignUpdatePayload) =>
+    req<ResearchAreaFindingEntry>(`/api/research-areas/${areaId}/findings/${findingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  removeFindingAssignment: (areaId: number, findingId: number) =>
+    req<{ ok: boolean }>(`/api/research-areas/${areaId}/findings/${findingId}`, {
+      method: "DELETE",
+    }),
 };
