@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from sqlalchemy.orm import Session, selectinload
 from app.models import Source, SourceTag
 from app.schemas import MatrixRow, MatrixFilters, MatrixResponse
@@ -20,7 +21,7 @@ def build_matrix_rows(db: Session) -> list[MatrixRow]:
         tags = [st.tag.name for st in src.source_tags]
         notes_count = len(src.notes)
         latest_summary = (
-            sorted(src.summaries, key=lambda s: s.created_at or "", reverse=True)[0]
+            sorted(src.summaries, key=lambda s: s.created_at or datetime.min, reverse=True)[0]
             if src.summaries else None
         )
         source_review_status = latest_summary.review_status if latest_summary else "unreviewed"
@@ -148,8 +149,8 @@ def apply_filters(rows: list[MatrixRow], filters: MatrixFilters) -> list[MatrixR
     _SORT_KEYS = {
         "year": lambda r: (r.year is None, r.year or 0),
         "title": lambda r: (r.source_title or "").lower(),
-        "created_at": lambda r: r.created_at or "",
-        "updated_at": lambda r: r.updated_at or "",
+        "created_at": lambda r: r.created_at or datetime.min,
+        "updated_at": lambda r: r.updated_at or datetime.min,
         "review_status": lambda r: r.finding_review_status or r.source_review_status or "",
         "validation_status": lambda r: r.validation_status or "",
     }
