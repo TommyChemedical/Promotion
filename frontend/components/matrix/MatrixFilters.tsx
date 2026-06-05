@@ -17,6 +17,9 @@ export function MatrixFiltersPanel({ onSearch, loading }: Props) {
   const [hasEvidence, setHasEvidence] = useState("");
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
   const [onlyReviewed, setOnlyReviewed] = useState(false);
+  const [researchAreaId, setResearchAreaId] = useState("");
+  const [relationType, setRelationType] = useState("");
+  const [relevance, setRelevance] = useState("");
   const [sortBy, setSortBy] = useState("updated_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [limit, setLimit] = useState("100");
@@ -37,6 +40,9 @@ export function MatrixFiltersPanel({ onSearch, loading }: Props) {
     if (hasEvidence === "false") filters.has_evidence = false;
     if (onlyUnreviewed) filters.only_unreviewed = true;
     if (onlyReviewed) filters.only_reviewed = true;
+    if (researchAreaId) filters.research_area_id = parseInt(researchAreaId, 10);
+    if (relationType) filters.relation_type = relationType;
+    if (relevance) filters.relevance = relevance;
     filters.sort_by = sortBy;
     filters.sort_order = sortOrder;
     const parsedLimit = parseInt(limit, 10);
@@ -110,6 +116,43 @@ export function MatrixFiltersPanel({ onSearch, loading }: Props) {
           <option value="">Alle Belege</option>
           <option value="true">Mit Beleg</option>
           <option value="false">Ohne Beleg</option>
+        </select>
+        <input
+          type="number"
+          placeholder="Research-Area ID"
+          value={researchAreaId}
+          onChange={(e) => setResearchAreaId(e.target.value)}
+          className="w-40 border border-gray-300 rounded px-2 py-1.5 text-sm"
+        />
+        <select
+          value={relationType}
+          onChange={(e) => setRelationType(e.target.value)}
+          className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+        >
+          <option value="">Alle Relationen</option>
+          <option value="supports">Stützt</option>
+          <option value="contradicts">Widerspricht</option>
+          <option value="differentiates">Differenziert</option>
+          <option value="defines">Definiert</option>
+          <option value="evidence">Beleg</option>
+          <option value="method">Methode</option>
+          <option value="theory">Theorie</option>
+          <option value="limitation">Limitation</option>
+          <option value="research_gap">Forschungslücke</option>
+          <option value="background">Hintergrund</option>
+          <option value="other">Sonstiges</option>
+        </select>
+        <select
+          value={relevance}
+          onChange={(e) => setRelevance(e.target.value)}
+          className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+        >
+          <option value="">Alle Relevanz</option>
+          <option value="central">Zentral</option>
+          <option value="useful">Nützlich</option>
+          <option value="marginal">Marginal</option>
+          <option value="context_only">Nur Kontext</option>
+          <option value="do_not_use">Nicht verwenden</option>
         </select>
         <label className="flex items-center gap-1 text-sm text-gray-600">
           <input

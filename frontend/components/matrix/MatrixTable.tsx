@@ -101,6 +101,19 @@ export function MatrixTable({ rows, total }: Props) {
                   ) : (
                     <span className="text-gray-400 italic">Kein Finding</span>
                   )}
+                  {row.research_areas?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {row.research_areas.map((ra) => (
+                        <Link
+                          key={ra.research_area_id}
+                          href={`/research-map/${ra.research_area_id}`}
+                          className="text-xs bg-indigo-50 text-indigo-600 border border-indigo-100 rounded px-1.5 py-0.5 hover:bg-indigo-100"
+                        >
+                          {ra.title}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
                   {row.finding_page_start != null
