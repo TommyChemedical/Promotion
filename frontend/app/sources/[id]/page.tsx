@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import { SummaryPanel } from "@/components/SummaryPanel";
+import FullTextSection from "@/components/FullTextSection";
 
 export const dynamic = "force-dynamic";
 
@@ -92,23 +93,8 @@ export default async function SourceDetailPage({
         </section>
       )}
 
-      {/* Full text */}
-      <section>
-        <h2 className="text-lg font-semibold mb-3">
-          Volltext{" "}
-          <span className="text-gray-400 font-normal text-base">
-            ({source.texts.length} Seiten)
-          </span>
-        </h2>
-        <div className="space-y-4">
-          {source.texts.map((t) => (
-            <div key={t.id} className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-xs text-gray-400 mb-2 font-medium">Seite {t.page_number}</div>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{t.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Full text (collapsed by default) */}
+      <FullTextSection texts={source.texts} />
     </div>
   );
 }
