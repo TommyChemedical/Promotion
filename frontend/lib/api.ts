@@ -289,8 +289,15 @@ export const api = {
     if (filters) {
       if (filters.q) params.set("q", filters.q);
       if (filters.tag) filters.tag.forEach((t) => params.append("tag", t));
+      if (filters.year_from != null) params.set("year_from", String(filters.year_from));
+      if (filters.year_to != null) params.set("year_to", String(filters.year_to));
       if (filters.review_status) params.set("review_status", filters.review_status);
       if (filters.validation_status) params.set("validation_status", filters.validation_status);
+      if (filters.has_evidence != null) params.set("has_evidence", String(filters.has_evidence));
+      if (filters.only_reviewed) params.set("only_reviewed", "true");
+      if (filters.only_unreviewed) params.set("only_unreviewed", "true");
+      if (filters.sort_by) params.set("sort_by", filters.sort_by);
+      if (filters.sort_order) params.set("sort_order", filters.sort_order);
     }
     const qs = params.toString();
     return `${BASE}/api/matrix/export.${format}${qs ? `?${qs}` : ""}`;
