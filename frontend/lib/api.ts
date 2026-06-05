@@ -50,7 +50,7 @@ export interface Summary {
   research_question: string;
   methods: string;
   data_basis: string;
-  key_results: string; // JSON string of KeyResult[]
+  key_results: string;
   limitations: string;
   relevance: string;
   uncertainty_notes: string;
@@ -69,6 +69,81 @@ export interface SearchResult {
   page_number: number;
   snippet: string;
 }
+
+// --- Review types ---
+
+export type ReviewStatus =
+  | "unreviewed"
+  | "correct"
+  | "partially_correct"
+  | "incorrect"
+  | "unsupported"
+  | "missing_important_context";
+
+export type ValidationStatus =
+  | "no_evidence"
+  | "evidence_found"
+  | "evidence_not_found"
+  | "invalid_page";
+
+export type ValidationMethod = "none" | "exact" | "fragment" | "fuzzy";
+
+export interface ReviewableSummary {
+  id: number;
+  research_question: string;
+  methods: string;
+  data_basis: string;
+  limitations: string;
+  relevance: string;
+  uncertainty_notes: string;
+  review_status: ReviewStatus;
+  review_comment: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  confidence_user: number | null;
+  created_at: string;
+}
+
+export interface ReviewableFinding {
+  id: number;
+  claim: string;
+  evidence_text: string;
+  evidence_quote: string;
+  page_start: number | null;
+  page_end: number | null;
+  confidence: string;
+  validation_status: ValidationStatus;
+  validation_method: ValidationMethod;
+  validation_score: number;
+  validated_at: string | null;
+  review_status: ReviewStatus;
+  review_comment: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  confidence_user: number | null;
+  page_preview: string;
+  created_at: string;
+}
+
+export interface SourceReviewResponse {
+  source_id: number;
+  summary: ReviewableSummary | null;
+  findings: ReviewableFinding[];
+}
+
+export interface ReviewUpdateRequest {
+  review_status: ReviewStatus;
+  review_comment?: string;
+  confidence_user?: number | null;
+}
+
+export interface EvidenceValidationResponse {
+  source_id: number;
+  validated: number;
+  results: { finding_id: number; validation_status: ValidationStatus }[];
+}
+
+// --- HTTP helper ---
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const r = await fetch(`${BASE}${path}`, options);
@@ -111,4 +186,25 @@ export const api = {
     }),
   search: (q: string) =>
     req<SearchResult[]>(`/api/search?q=${encodeURIComponent(q)}`),
+
+  // Review
+  getSourceReview: (id: number) =>
+    req<SourceReviewResponse>(`/api/review/sources/${id}`),
+  patchSummaryReview: (summaryId: number, body: ReviewUpdateRequest) =>
+    req<ReviewableSummary>(`/api/review/summary/${summaryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  patchFindingReview: (findingId: number, body: ReviewUpdateRequest) =>
+    req<ReviewableFinding>(`/api/review/finding/${findingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  validateEvidence: (sourceId: number) =>
+    req<EvidenceValidationResponse>(
+      `/api/review/source/${sourceId}/validate-evidence`,
+      { method: "POST" }
+    ),
 };
