@@ -56,6 +56,12 @@ export function SummaryPanel({ sourceId, initialSummaries }: Props) {
         </button>
       </div>
 
+      {loading && (
+        <p className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 mb-3">
+          Die KI analysiert den Text — das dauert je nach Länge 1–3 Minuten. Bitte warten…
+        </p>
+      )}
+
       {error && (
         <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3">
           {error}
