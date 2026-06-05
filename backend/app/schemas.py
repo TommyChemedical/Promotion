@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SourceBase(BaseModel):
@@ -34,7 +34,6 @@ class FindingCreate(BaseModel):
     evidence_text: str = ""
     evidence_quote: str = ""
     page_number: Optional[int] = None
-    page_end: Optional[int] = None
     relevance: str = ""
     confidence: str = "low"
 
@@ -45,7 +44,6 @@ class FindingRead(BaseModel):
     evidence_text: str
     evidence_quote: str = ""
     page_number: Optional[int] = None
-    page_end: Optional[int] = None
     relevance: str
     confidence: str
     validation_status: str = "no_evidence"
@@ -117,7 +115,7 @@ class ValidationStatus(str, Enum):
 class ReviewUpdateRequest(BaseModel):
     review_status: ReviewStatus
     review_comment: str = ""
-    confidence_user: Optional[int] = None
+    confidence_user: Optional[int] = Field(None, ge=1, le=5)
 
 
 class ReviewableSummaryResponse(BaseModel):
@@ -132,7 +130,7 @@ class ReviewableSummaryResponse(BaseModel):
     review_comment: str
     reviewed_at: Optional[datetime] = None
     reviewed_by: Optional[str] = None
-    confidence_user: Optional[int] = None
+    confidence_user: Optional[int] = Field(None, ge=1, le=5)
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -144,14 +142,13 @@ class ReviewableFindingResponse(BaseModel):
     evidence_text: str
     evidence_quote: str
     page_number: Optional[int] = None
-    page_end: Optional[int] = None
     confidence: str
     validation_status: ValidationStatus
     review_status: ReviewStatus
     review_comment: str
     reviewed_at: Optional[datetime] = None
     reviewed_by: Optional[str] = None
-    confidence_user: Optional[int] = None
+    confidence_user: Optional[int] = Field(None, ge=1, le=5)
     page_preview: str = ""
     created_at: datetime
 

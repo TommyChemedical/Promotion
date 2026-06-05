@@ -68,12 +68,10 @@ def get_page_preview(source_id: int, page_number: Optional[int], db: Session,
         return ""
     text = doc_text.text
     if evidence_quote and evidence_quote.strip():
-        # Use the first few normalised words as the anchor for the preview
-        norm_q = _normalize(evidence_quote)
-        norm_t = _normalize(text)
-        anchor = " ".join(norm_q.split()[:5])
-        idx = norm_t.find(anchor) if anchor else -1
-        if idx >= 0:
-            start = max(0, idx - 50)
-            return text[start: start + max_len]
+        anchor = " ".join(_normalize(evidence_quote).split()[:5])
+        if anchor:
+            idx = text.lower().find(anchor)
+            if idx >= 0:
+                start = max(0, idx - 50)
+                return text[start: start + max_len]
     return text[:max_len]

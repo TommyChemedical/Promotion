@@ -139,6 +139,15 @@ def test_patch_finding_review_status(review_client):
     assert data["review_comment"] == "No direct quote"
 
 
+def test_patch_summary_confidence_user_out_of_range(review_client):
+    client, source_id, summary_id, finding_id = review_client
+    r = client.patch(
+        f"/api/review/summary/{summary_id}",
+        json={"review_status": "correct", "confidence_user": 99},
+    )
+    assert r.status_code == 422
+
+
 def test_validate_evidence_endpoint(review_client):
     client, source_id, summary_id, finding_id = review_client
     r = client.post(f"/api/review/source/{source_id}/validate-evidence")
