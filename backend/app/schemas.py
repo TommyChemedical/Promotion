@@ -236,3 +236,113 @@ class MatrixResponse(BaseModel):
     limit: int
     offset: int
     filters_applied: dict[str, Any]
+
+
+# --- Research Map types ---
+
+class ResearchAreaCreate(BaseModel):
+    title: str
+    description: str = ""
+    area_type: str = "other"
+    parent_id: Optional[int] = None
+    sort_order: int = 0
+
+
+class ResearchAreaUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    area_type: Optional[str] = None
+    parent_id: Optional[int] = None
+    sort_order: Optional[int] = None
+
+
+class ResearchAreaRead(BaseModel):
+    id: int
+    title: str
+    description: str
+    area_type: str
+    parent_id: Optional[int]
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class FindingAssignCreate(BaseModel):
+    finding_id: int
+    relevance: str = "useful"
+    relation_type: str = "other"
+    user_comment: str = ""
+
+
+class FindingAssignUpdate(BaseModel):
+    relevance: Optional[str] = None
+    relation_type: Optional[str] = None
+    user_comment: Optional[str] = None
+
+
+class ResearchAreaFindingEntry(BaseModel):
+    """One finding assigned to a research area — enriched with source info."""
+    link_id: int
+    finding_id: int
+    relevance: str
+    relation_type: str
+    user_comment: str
+    # Finding fields
+    claim: str
+    evidence_quote: str
+    evidence_text: str
+    page_start: Optional[int]
+    page_end: Optional[int]
+    confidence: str
+    validation_status: str
+    validation_method: str
+    finding_review_status: str
+    finding_review_comment: str
+    # Source fields
+    source_id: int
+    source_title: str
+    authors: str
+    year: Optional[int]
+    doi: str
+    tags: list[str]
+    summary_short: Optional[str]
+    created_at: datetime
+    updated_at: Optional[datetime]
+
+    model_config = {"from_attributes": True}
+
+
+class TopSourceEntry(BaseModel):
+    source_id: int
+    source_title: str
+    authors: str
+    year: Optional[int]
+    finding_count: int
+
+
+class ResearchAreaOverview(BaseModel):
+    area_id: int
+    area_title: str
+    area_type: str
+    count_findings_total: int
+    count_findings_correct: int
+    count_findings_partially_correct: int
+    count_findings_unreviewed: int
+    count_evidence_found: int
+    count_evidence_missing: int
+    count_sources: int
+    relation_type_counts: dict[str, int]
+    relevance_counts: dict[str, int]
+    top_sources: list[TopSourceEntry]
+    gaps: list[str]
+
+
+class ResearchAreaRef(BaseModel):
+    """Compact reference used inside MatrixRow."""
+    research_area_id: int
+    title: str
+    area_type: str
+    relevance: str
+    relation_type: str

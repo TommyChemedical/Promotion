@@ -97,3 +97,27 @@ def test_finding_research_area_unique_pair(db):
     db.add(FindingResearchArea(finding_id=f.id, research_area_id=area.id, relevance="useful", relation_type="other"))
     with pytest.raises(IntegrityError):
         db.commit()
+
+
+def test_research_area_schemas():
+    from app.schemas import (
+        ResearchAreaCreate, ResearchAreaRead, ResearchAreaUpdate,
+        FindingAssignCreate, FindingAssignUpdate, ResearchAreaFindingEntry,
+        ResearchAreaOverview,
+    )
+    create = ResearchAreaCreate(title="Test", area_type="chapter")
+    assert create.title == "Test"
+    assert create.sort_order == 0
+
+    update = ResearchAreaUpdate(title="Updated")
+    assert update.title == "Updated"
+
+    overview = ResearchAreaOverview(
+        area_id=1, area_title="T", area_type="chapter",
+        count_findings_total=5, count_findings_correct=3,
+        count_findings_partially_correct=1, count_findings_unreviewed=1,
+        count_evidence_found=4, count_evidence_missing=1,
+        count_sources=2, relation_type_counts={}, relevance_counts={},
+        top_sources=[], gaps=[],
+    )
+    assert overview.count_findings_total == 5
