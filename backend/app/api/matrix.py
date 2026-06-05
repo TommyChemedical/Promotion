@@ -24,7 +24,7 @@ def _parse_filters(
     only_reviewed: bool = Query(False),
     only_unreviewed: bool = Query(False),
     source_id: Optional[int] = Query(None),
-    sort_by: str = Query("created_at"),
+    sort_by: str = Query("updated_at"),
     sort_order: str = Query("desc"),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),

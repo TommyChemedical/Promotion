@@ -224,7 +224,7 @@ class MatrixFilters(BaseModel):
     only_reviewed: bool = False
     only_unreviewed: bool = False
     source_id: Optional[int] = None
-    sort_by: str = "created_at"
+    sort_by: str = "updated_at"
     sort_order: str = "desc"
     limit: int = Field(100, ge=1, le=500)
     offset: int = Field(0, ge=0)
