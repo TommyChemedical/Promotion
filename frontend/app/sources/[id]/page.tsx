@@ -4,6 +4,7 @@ import { SummaryPanel } from "@/components/SummaryPanel";
 import FullTextSection from "@/components/FullTextSection";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import FindingsSectionClient from "@/components/FindingsSectionClient";
+import { formatAuthorsAPA7 } from "@/lib/formatters";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function SourceDetailPage({
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">{source.title}</h1>
         <p className="text-gray-500 text-sm mt-1">
-          {source.authors || "—"}
+          {formatAuthorsAPA7(source.authors) || "—"}
           {source.year ? ` · ${source.year}` : ""}
           {source.journal ? ` · ${source.journal}` : ""}
         </p>

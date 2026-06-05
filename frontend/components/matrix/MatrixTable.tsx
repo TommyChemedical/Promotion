@@ -2,6 +2,7 @@
 import Link from "next/link";
 import type { MatrixRow } from "@/lib/api";
 import { ValidationBadge, ReviewBadge } from "./StatusBadge";
+import { formatAuthorsAPA7 } from "@/lib/formatters";
 
 interface Props {
   rows: MatrixRow[];
@@ -75,7 +76,7 @@ export function MatrixTable({ rows, total }: Props) {
                     {truncate(row.source_title, 40)}
                   </div>
                   <div className="text-xs text-gray-500 truncate">
-                    {row.authors || "—"}
+                    {formatAuthorsAPA7(row.authors) || "—"}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-gray-600 whitespace-nowrap">

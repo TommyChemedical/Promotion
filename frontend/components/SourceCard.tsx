@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Source } from "@/lib/api";
+import { formatAuthorsAPA7 } from "@/lib/formatters";
 
 export function SourceCard({ source }: { source: Source }) {
   const router = useRouter();
@@ -16,7 +17,7 @@ export function SourceCard({ source }: { source: Source }) {
         <div className="flex-1 min-w-0">
           <h2 className="font-medium text-gray-900 truncate">{source.title}</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            {source.authors || "—"}
+            {formatAuthorsAPA7(source.authors) || "—"}
             {source.year ? ` · ${source.year}` : ""}
             {source.journal ? ` · ${source.journal}` : ""}
           </p>

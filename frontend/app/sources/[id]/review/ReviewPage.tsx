@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import type { Source, SourceReviewResponse } from "@/lib/api";
 import { SummaryReviewCard } from "@/components/review/SummaryReviewCard";
 import { FindingReviewCard } from "@/components/review/FindingReviewCard";
+import { formatAuthorsAPA7 } from "@/lib/formatters";
 
 interface Props {
   source: Source;
@@ -47,7 +48,7 @@ export function ReviewPage({ source, reviewData: initial }: Props) {
       <div className="mb-6 rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
         <h1 className="text-xl font-bold text-gray-900">{source.title}</h1>
         {source.authors && (
-          <p className="mt-1 text-sm text-gray-600">{source.authors}</p>
+          <p className="mt-1 text-sm text-gray-600">{formatAuthorsAPA7(source.authors)}</p>
         )}
         <div className="mt-1 flex flex-wrap gap-3 text-sm text-gray-500">
           {source.year && <span>{source.year}</span>}
