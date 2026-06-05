@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import { SummaryPanel } from "@/components/SummaryPanel";
 import FullTextSection from "@/components/FullTextSection";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +46,7 @@ export default async function SourceDetailPage({
         )}
       </div>
 
-      {/* AI Summary */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5">
-        <SummaryPanel sourceId={source.id} initialSummaries={source.summaries} />
-      </div>
-
-      {/* Findings */}
+      {/* Findings — always visible, first */}
       {source.findings.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold mb-3">Findings</h2>
@@ -84,6 +80,16 @@ export default async function SourceDetailPage({
         </section>
       )}
 
+      {/* KI-Zusammenfassung — collapsible */}
+      <CollapsibleSection title="KI-Zusammenfassung">
+        <div className="bg-white border border-gray-200 rounded-lg p-5">
+          <SummaryPanel sourceId={source.id} initialSummaries={source.summaries} />
+        </div>
+      </CollapsibleSection>
+
+      {/* Volltext — collapsible */}
+      <FullTextSection texts={source.texts} />
+
       {/* Notes */}
       {source.notes.length > 0 && (
         <section>
@@ -103,9 +109,6 @@ export default async function SourceDetailPage({
           </ul>
         </section>
       )}
-
-      {/* Full text (collapsed by default) */}
-      <FullTextSection texts={source.texts} />
     </div>
   );
 }
