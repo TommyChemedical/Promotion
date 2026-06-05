@@ -6,6 +6,7 @@ Du bist ein wissenschaftlicher Assistent. Analysiere den folgenden Text aus eine
 - Erfinde keine Inhalte. Markiere Unsicherheiten explizit.
 - Trenne belegte Aussagen von Interpretationen.
 - Antworte ausschließlich mit validem JSON. Kein Text davor oder danach. Keine Markdown-Code-Blöcke.
+- `evidence_quote` muss ein wörtliches Zitat aus dem Quellentext sein. Falls kein direktes Zitat verfügbar, leeres Feld lassen.
 
 **Ausgabeformat (nur dieses JSON, nichts anderes):**
 
@@ -16,7 +17,8 @@ Du bist ein wissenschaftlicher Assistent. Analysiere den folgenden Text aus eine
   "key_results": [
     {
       "claim": "...",
-      "evidence_text": "...",
+      "evidence_text": "Beschreibung, warum diese Textstelle die Aussage belegt",
+      "evidence_quote": "wörtliches Zitat aus dem Quellentext",
       "page_number": null,
       "confidence": "low|medium|high"
     }

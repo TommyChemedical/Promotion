@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models import Source, Summary, LLMRun, DocumentText, Finding
 from app.schemas import SummaryRead
 from app.services.llm_service import llm_service, ModelTier
+from app.services.evidence_service import validate_finding_evidence
 
 logger = logging.getLogger(__name__)
 
@@ -129,15 +130,21 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
     )
     db.add(summary)
 
-    # Auto-create Finding records from key_results
+    # Auto-create Finding records from key_results and validate evidence
     for kr in merged.get("key_results", []):
-        db.add(Finding(
+        if not kr.get("claim"):
+            continue
+        finding = Finding(
             source_id=source_id,
             claim=kr.get("claim", ""),
             evidence_text=kr.get("evidence_text", ""),
+            evidence_quote=kr.get("evidence_quote", ""),
             page_number=kr.get("page_number"),
             confidence=kr.get("confidence", "low"),
-        ))
+        )
+        db.add(finding)
+        db.flush()  # get finding.id assigned before validation query
+        finding.validation_status = validate_finding_evidence(finding, db)
 
     db.commit()
     db.refresh(summary)

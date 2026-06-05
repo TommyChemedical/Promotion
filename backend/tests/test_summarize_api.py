@@ -213,3 +213,34 @@ def test_summarize_auto_creates_findings(client_with_source):
     claims = [f["claim"] for f in findings]
     assert "X causes Y" in claims
     assert "Y increases Z" in claims
+
+
+def test_summarize_auto_validates_evidence(client_with_source):
+    """After summarization, each finding must have a validation_status set (not None)."""
+    client, source_id, Session = client_with_source
+    mock_summary_with_quote = {
+        "research_question": "Does X reduce pain?",
+        "methods": "RCT", "data_basis": "100 patients",
+        "key_results": [
+            {
+                "claim": "X reduces pain",
+                "evidence_text": "Significant reduction found",
+                "evidence_quote": "X causes Y in clinical trials",
+                "page_number": 1,
+                "confidence": "high",
+            }
+        ],
+        "limitations": "", "relevance": "", "uncertainty_notes": "",
+    }
+    mock_msg = MagicMock()
+    mock_msg.content = [MagicMock(text=json.dumps(mock_summary_with_quote))]
+    with patch("app.services.llm_service.llm_service._client") as mock_client:
+        mock_client.messages.create.return_value = mock_msg
+        r = client.post(f"/api/sources/{source_id}/summarize")
+    assert r.status_code == 200
+    with Session() as session:
+        from app.models import Finding
+        findings = session.query(Finding).filter_by(source_id=source_id).all()
+    assert len(findings) == 1
+    assert findings[0].validation_status in ("evidence_found", "evidence_not_found", "no_evidence")
+    assert findings[0].evidence_quote == "X causes Y in clinical trials"
