@@ -121,3 +121,113 @@ def test_research_area_schemas():
         top_sources=[], gaps=[],
     )
     assert overview.count_findings_total == 5
+
+
+# ---------------------------------------------------------------------------
+# API (CRUD) tests
+# ---------------------------------------------------------------------------
+from fastapi.testclient import TestClient
+from app.main import app
+from app.database import get_db
+
+
+@pytest.fixture
+def area_client():
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+
+    def override_db():
+        with Session() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_db
+    with TestClient(app) as c:
+        yield c, Session
+    app.dependency_overrides.clear()
+
+
+def test_create_research_area(area_client):
+    client, _ = area_client
+    r = client.post("/api/research-areas", json={
+        "title": "Kapitel 2", "area_type": "chapter", "sort_order": 1
+    })
+    assert r.status_code == 201
+    data = r.json()
+    assert data["title"] == "Kapitel 2"
+    assert data["area_type"] == "chapter"
+    assert data["id"] is not None
+
+
+def test_list_research_areas(area_client):
+    client, _ = area_client
+    client.post("/api/research-areas", json={"title": "A", "area_type": "theme", "sort_order": 0})
+    client.post("/api/research-areas", json={"title": "B", "area_type": "argument", "sort_order": 1})
+    r = client.get("/api/research-areas")
+    assert r.status_code == 200
+    assert len(r.json()) == 2
+
+
+def test_get_research_area(area_client):
+    client, _ = area_client
+    created = client.post("/api/research-areas", json={"title": "T", "area_type": "other", "sort_order": 0}).json()
+    r = client.get(f"/api/research-areas/{created['id']}")
+    assert r.status_code == 200
+    assert r.json()["title"] == "T"
+
+
+def test_get_research_area_not_found(area_client):
+    client, _ = area_client
+    r = client.get("/api/research-areas/99999")
+    assert r.status_code == 404
+
+
+def test_update_research_area(area_client):
+    client, _ = area_client
+    created = client.post("/api/research-areas", json={"title": "Old", "area_type": "other", "sort_order": 0}).json()
+    r = client.patch(f"/api/research-areas/{created['id']}", json={"title": "New"})
+    assert r.status_code == 200
+    assert r.json()["title"] == "New"
+    assert r.json()["area_type"] == "other"  # unchanged
+
+
+def test_delete_research_area_no_findings(area_client):
+    client, _ = area_client
+    created = client.post("/api/research-areas", json={"title": "Del", "area_type": "other", "sort_order": 0}).json()
+    r = client.delete(f"/api/research-areas/{created['id']}")
+    assert r.status_code == 200
+    assert client.get(f"/api/research-areas/{created['id']}").status_code == 404
+
+
+def test_delete_research_area_cascades_assignments(area_client):
+    """Delete should succeed even if findings are assigned — assignments are cascade-deleted."""
+    client, Session = area_client
+    with Session() as session:
+        src = Source(title="S", filename="s.pdf", file_path="/s.pdf")
+        session.add(src)
+        session.flush()
+        f = Finding(source_id=src.id, claim="C", evidence_text="", confidence="low")
+        session.add(f)
+        session.commit()
+        finding_id = f.id
+
+    area = client.post("/api/research-areas", json={"title": "A", "area_type": "other", "sort_order": 0}).json()
+    client.post(f"/api/research-areas/{area['id']}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.delete(f"/api/research-areas/{area['id']}")
+    assert r.status_code == 200
+    assert client.get(f"/api/research-areas/{area['id']}").status_code == 404
+
+
+def test_research_area_hierarchy(area_client):
+    client, _ = area_client
+    parent = client.post("/api/research-areas", json={"title": "Parent", "area_type": "chapter", "sort_order": 0}).json()
+    child = client.post("/api/research-areas", json={
+        "title": "Child", "area_type": "theme", "sort_order": 0, "parent_id": parent["id"]
+    }).json()
+    assert child["parent_id"] == parent["id"]

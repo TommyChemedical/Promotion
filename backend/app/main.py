@@ -7,6 +7,7 @@ from app.api import export as export_router
 from app.api import review as review_router
 from app.api.matrix import router as matrix_router
 from app.api.stats import router as stats_router
+from app.api.research_areas import router as research_areas_router
 
 app = FastAPI(title="LiteraturKI", version="0.1.0")
 
@@ -24,6 +25,7 @@ app.include_router(export_router.router)
 app.include_router(review_router.router)
 app.include_router(matrix_router)
 app.include_router(stats_router)
+app.include_router(research_areas_router)
 
 
 @app.on_event("startup")
