@@ -57,7 +57,7 @@ class Summary(Base):
     review_status = Column(String, default="unreviewed")
     review_comment = Column(Text, default="")
     reviewed_at = Column(DateTime, nullable=True)
-    reviewed_by = Column(String, default="local_user")
+    reviewed_by = Column(String, nullable=True)
     confidence_user = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -99,7 +99,7 @@ class Finding(Base):
     review_status = Column(String, default="unreviewed")
     review_comment = Column(Text, default="")
     reviewed_at = Column(DateTime, nullable=True)
-    reviewed_by = Column(String, default="local_user")
+    reviewed_by = Column(String, nullable=True)
     confidence_user = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

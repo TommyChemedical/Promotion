@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 from app.models import Base
@@ -42,18 +43,19 @@ def _run_migrations():
         ("findings", "review_status TEXT NOT NULL DEFAULT 'unreviewed'"),
         ("findings", "review_comment TEXT NOT NULL DEFAULT ''"),
         ("findings", "reviewed_at DATETIME"),
-        ("findings", "reviewed_by TEXT NOT NULL DEFAULT 'local_user'"),
+        ("findings", "reviewed_by TEXT"),
         ("findings", "confidence_user INTEGER"),
         ("summaries", "review_status TEXT NOT NULL DEFAULT 'unreviewed'"),
         ("summaries", "review_comment TEXT NOT NULL DEFAULT ''"),
         ("summaries", "reviewed_at DATETIME"),
-        ("summaries", "reviewed_by TEXT NOT NULL DEFAULT 'local_user'"),
+        ("summaries", "reviewed_by TEXT"),
         ("summaries", "confidence_user INTEGER"),
     ]
     with engine.connect() as conn:
         for table, col_def in new_columns:
             try:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col_def}"))
-            except Exception:
-                pass  # column already exists
+            except OperationalError as e:
+                if "duplicate column name" not in str(e).lower():
+                    raise
         conn.commit()
