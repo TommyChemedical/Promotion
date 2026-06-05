@@ -231,3 +231,119 @@ def test_research_area_hierarchy(area_client):
         "title": "Child", "area_type": "theme", "sort_order": 0, "parent_id": parent["id"]
     }).json()
     assert child["parent_id"] == parent["id"]
+
+
+@pytest.fixture
+def area_with_finding(area_client):
+    client, Session = area_client
+    with Session() as session:
+        src = Source(title="Src", filename="s.pdf", file_path="/s.pdf",
+                     authors="A. Author", year=2023, doi="", journal="")
+        session.add(src)
+        session.flush()
+        f = Finding(source_id=src.id, claim="Finding claim",
+                    evidence_text="some text", evidence_quote="verbatim quote",
+                    page_start=3, page_end=3, confidence="high",
+                    validation_status="evidence_found", validation_method="exact",
+                    validation_score=1.0, review_status="correct",
+                    review_comment="Good")
+        session.add(f)
+        session.commit()
+        finding_id = f.id
+        source_id = src.id
+
+    area = client.post("/api/research-areas", json={"title": "Area A", "area_type": "argument", "sort_order": 0}).json()
+    return client, Session, area["id"], finding_id, source_id
+
+
+def test_assign_finding(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    r = client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports",
+        "user_comment": "Strong support"
+    })
+    assert r.status_code == 201
+    data = r.json()
+    assert data["finding_id"] == finding_id
+    assert data["relevance"] == "central"
+    assert data["relation_type"] == "supports"
+    assert data["claim"] == "Finding claim"
+    assert data["source_title"] == "Src"
+    assert data["year"] == 2023
+
+
+def test_assign_finding_duplicate_raises_409(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "useful", "relation_type": "other"
+    })
+    assert r.status_code == 409
+
+
+def test_assign_finding_invalid_finding_id(area_with_finding):
+    client, _, area_id, _, _ = area_with_finding
+    r = client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": 99999, "relevance": "central", "relation_type": "supports"
+    })
+    assert r.status_code == 404
+
+
+def test_assign_finding_invalid_area_id(area_with_finding):
+    client, _, _, finding_id, _ = area_with_finding
+    r = client.post("/api/research-areas/99999/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    assert r.status_code == 404
+
+
+def test_update_finding_assignment(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.patch(f"/api/research-areas/{area_id}/findings/{finding_id}", json={
+        "relevance": "marginal", "user_comment": "Reconsidered"
+    })
+    assert r.status_code == 200
+    assert r.json()["relevance"] == "marginal"
+    assert r.json()["relation_type"] == "supports"  # unchanged
+
+
+def test_delete_finding_assignment(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.delete(f"/api/research-areas/{area_id}/findings/{finding_id}")
+    assert r.status_code == 200
+    r2 = client.get(f"/api/research-areas/{area_id}/findings")
+    assert r2.json() == []
+
+
+def test_list_findings_for_area(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.get(f"/api/research-areas/{area_id}/findings")
+    assert r.status_code == 200
+    items = r.json()
+    assert len(items) == 1
+    assert items[0]["claim"] == "Finding claim"
+    assert items[0]["evidence_quote"] == "verbatim quote"
+    assert items[0]["validation_status"] == "evidence_found"
+
+
+def test_list_findings_filter_review_status(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.get(f"/api/research-areas/{area_id}/findings?review_status=correct")
+    assert len(r.json()) == 1
+
+    r2 = client.get(f"/api/research-areas/{area_id}/findings?review_status=incorrect")
+    assert len(r2.json()) == 0
