@@ -79,6 +79,8 @@ def test_summarize_creates_summary(client_with_source):
     client, source_id, _ = client_with_source
     mock_msg = MagicMock()
     mock_msg.content = [MagicMock(text=json.dumps(MOCK_SUMMARY))]
+    mock_msg.usage.input_tokens = 100
+    mock_msg.usage.output_tokens = 50
     with patch("app.services.llm_service.llm_service._client") as mock_client:
         mock_client.messages.create.return_value = mock_msg
         r = client.post(f"/api/sources/{source_id}/summarize")
@@ -93,6 +95,8 @@ def test_summarize_stores_llm_run(client_with_source):
     client, source_id, Session = client_with_source
     mock_msg = MagicMock()
     mock_msg.content = [MagicMock(text=json.dumps(MOCK_SUMMARY))]
+    mock_msg.usage.input_tokens = 100
+    mock_msg.usage.output_tokens = 50
     with patch("app.services.llm_service.llm_service._client") as mock_client:
         mock_client.messages.create.return_value = mock_msg
         r = client.post(f"/api/sources/{source_id}/summarize")
@@ -117,6 +121,8 @@ def test_summarize_handles_malformed_llm_json(client_with_source):
     client, source_id, _ = client_with_source
     mock_msg = MagicMock()
     mock_msg.content = [MagicMock(text="This is not valid JSON at all")]
+    mock_msg.usage.input_tokens = 100
+    mock_msg.usage.output_tokens = 50
     with patch("app.services.llm_service.llm_service._client") as mock_client:
         mock_client.messages.create.return_value = mock_msg
         r = client.post(f"/api/sources/{source_id}/summarize")
@@ -165,6 +171,8 @@ def test_summarize_uses_all_chunks_for_long_paper(client_with_source):
         call_index += 1
         msg = MagicMock()
         msg.content = [MagicMock(text=json.dumps(result))]
+        msg.usage.input_tokens = 100
+        msg.usage.output_tokens = 50
         return msg
 
     with patch("app.services.llm_service.llm_service._client") as mock_client:
@@ -202,6 +210,8 @@ def test_summarize_auto_creates_findings(client_with_source):
     }
     mock_msg = MagicMock()
     mock_msg.content = [MagicMock(text=json.dumps(mock_summary))]
+    mock_msg.usage.input_tokens = 100
+    mock_msg.usage.output_tokens = 50
     with patch("app.services.llm_service.llm_service._client") as mock_client:
         mock_client.messages.create.return_value = mock_msg
         client.post(f"/api/sources/{source_id}/summarize")
@@ -234,6 +244,8 @@ def test_summarize_auto_validates_evidence(client_with_source):
     }
     mock_msg = MagicMock()
     mock_msg.content = [MagicMock(text=json.dumps(mock_summary_with_quote))]
+    mock_msg.usage.input_tokens = 100
+    mock_msg.usage.output_tokens = 50
     with patch("app.services.llm_service.llm_service._client") as mock_client:
         mock_client.messages.create.return_value = mock_msg
         r = client.post(f"/api/sources/{source_id}/summarize")

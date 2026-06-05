@@ -27,9 +27,11 @@ def test_deep_tier_uses_deep_model(mock_client):
 
 
 def test_run_returns_text_content(mock_client):
+    from app.services.llm_service import LLMResult
     svc = LLMService(client=mock_client, fast_model="haiku-test", deep_model="sonnet-test")
     result = svc.run("prompt text", ModelTier.DEEP, task_type="summarize", prompt_version="summary_v1")
-    assert result == '{"result": "test output"}'
+    assert isinstance(result, LLMResult)
+    assert result.text == '{"result": "test output"}'
 
 
 def test_run_sends_correct_message_structure(mock_client):

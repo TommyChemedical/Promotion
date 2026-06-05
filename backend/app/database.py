@@ -54,6 +54,8 @@ def _run_migrations():
         ("findings", "validation_method TEXT NOT NULL DEFAULT 'none'"),
         ("findings", "validation_score REAL NOT NULL DEFAULT 0.0"),
         ("findings", "validated_at DATETIME"),
+        ("llm_runs", "input_tokens INTEGER NOT NULL DEFAULT 0"),
+        ("llm_runs", "output_tokens INTEGER NOT NULL DEFAULT 0"),
     ]
     with engine.connect() as conn:
         for table, col_def in new_columns:

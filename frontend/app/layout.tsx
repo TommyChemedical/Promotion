@@ -17,7 +17,7 @@ export default function RootLayout({
       <body className="bg-gray-50 text-gray-900 min-h-screen">
         <nav className="bg-white border-b border-gray-200 px-6 py-3">
           <div className="max-w-5xl mx-auto flex items-center gap-6">
-            <span className="font-semibold text-gray-800">LiteraturKI</span>
+            <Link href="/" className="font-semibold text-gray-800 hover:text-gray-600">LiteraturKI</Link>
             <Link href="/sources" className="text-sm text-gray-600 hover:text-gray-900">
               Quellen
             </Link>
@@ -32,6 +32,9 @@ export default function RootLayout({
             </Link>
             <Link href="/matrix" className="text-sm text-gray-600 hover:text-gray-900">
               Matrix
+            </Link>
+            <Link href="/settings" className="text-sm text-gray-600 hover:text-gray-900">
+              Einstellungen
             </Link>
           </div>
         </nav>

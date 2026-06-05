@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 import anthropic
 from app.config import settings
@@ -6,6 +7,13 @@ from app.config import settings
 class ModelTier(str, Enum):
     FAST = "fast"
     DEEP = "deep"
+
+
+@dataclass
+class LLMResult:
+    text: str
+    input_tokens: int
+    output_tokens: int
 
 
 class LLMService:
@@ -27,15 +35,19 @@ class LLMService:
     def model_name_for_tier(self, tier: ModelTier) -> str:
         return self._fast_model if tier == ModelTier.FAST else self._deep_model
 
-    def run(self, prompt: str, tier: ModelTier, task_type: str, prompt_version: str) -> str:
+    def run(self, prompt: str, tier: ModelTier, task_type: str, prompt_version: str) -> LLMResult:
         model = self._fast_model if tier == ModelTier.FAST else self._deep_model
         try:
             response = self._client.messages.create(
                 model=model,
-                max_tokens=4096,  # 4096 tokens ≈ 3000 words, sufficient for scientific abstract-length summaries
+                max_tokens=4096,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.content[0].text
+            return LLMResult(
+                text=response.content[0].text,
+                input_tokens=response.usage.input_tokens,
+                output_tokens=response.usage.output_tokens,
+            )
         except Exception as e:
             raise RuntimeError(
                 f"LLM-Anfrage fehlgeschlagen (Modell: {model}, Aufgabe: {task_type}): {e}"

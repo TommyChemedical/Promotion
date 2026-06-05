@@ -133,6 +133,8 @@ class LLMRun(Base):
     prompt_version = Column(String, nullable=False)
     prompt = Column(Text, nullable=False)
     output_json = Column(Text, default="")
+    input_tokens = Column(Integer, nullable=False, default=0)
+    output_tokens = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     source = relationship("Source", back_populates="llm_runs")

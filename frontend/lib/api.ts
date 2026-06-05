@@ -197,6 +197,14 @@ export interface MatrixFilters {
   offset?: number;
 }
 
+// --- Token stats ---
+
+export interface TokenStats {
+  input_tokens: number;
+  output_tokens: number;
+  total_runs: number;
+}
+
 // --- HTTP helper ---
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
@@ -261,6 +269,12 @@ export const api = {
       `/api/review/source/${sourceId}/validate-evidence`,
       { method: "POST" }
     ),
+
+  // Stats
+  getTokenStats: (since?: string) => {
+    const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+    return req<TokenStats>(`/api/stats/tokens${qs}`);
+  },
 
   // Matrix
   getMatrix: (filters?: MatrixFilters) => {

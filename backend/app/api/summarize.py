@@ -55,16 +55,22 @@ def _build_chunks(texts: list, max_chars: int) -> list[str]:
     return chunks[:MAX_CHUNKS]
 
 
+def _best(results: list[dict], key: str) -> str:
+    """Return the longest non-empty value for a field across all chunks."""
+    candidates = [r[key] for r in results if r.get(key)]
+    return max(candidates, key=len) if candidates else ""
+
+
 def _merge_summaries(results: list[dict]) -> dict:
     """Merge LLM outputs from multiple chunks into one summary dict."""
     if not results:
         return {}
     return {
-        "research_question": next((r["research_question"] for r in results if r.get("research_question")), ""),
-        "methods":           next((r["methods"]           for r in results if r.get("methods")), ""),
-        "data_basis":        next((r["data_basis"]        for r in results if r.get("data_basis")), ""),
-        "limitations":       next((r["limitations"]       for r in results if r.get("limitations")), ""),
-        "relevance":         next((r["relevance"]         for r in results if r.get("relevance")), ""),
+        "research_question": _best(results, "research_question"),
+        "methods":           _best(results, "methods"),
+        "data_basis":        _best(results, "data_basis"),
+        "limitations":       _best(results, "limitations"),
+        "relevance":         _best(results, "relevance"),
         "uncertainty_notes": " | ".join(r["uncertainty_notes"] for r in results if r.get("uncertainty_notes")),
         "key_results":       [kr for r in results for kr in r.get("key_results", [])],
     }
@@ -96,13 +102,14 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
     logger.info("Source %d: summarizing %d chunk(s) from %d pages", source_id, len(chunks), len(texts))
 
     for i, chunk_text in enumerate(chunks):
-        prompt = template.replace("{text}", chunk_text)
+        chunk_info = f"Abschnitt {i + 1} von {len(chunks)} des Gesamtdokuments"
+        prompt = template.replace("{text}", chunk_text).replace("{chunk_info}", chunk_info)
         try:
-            raw = llm_service.run(prompt, ModelTier.DEEP, task_type="summarize", prompt_version=SUMMARY_VERSION)
+            result = llm_service.run(prompt, ModelTier.DEEP, task_type="summarize", prompt_version=SUMMARY_VERSION)
         except RuntimeError as e:
             raise HTTPException(502, str(e))
         try:
-            data = _parse_llm_json(raw)
+            data = _parse_llm_json(result.text)
         except (json.JSONDecodeError, ValueError) as e:
             raise HTTPException(500, f"LLM hat kein valides JSON zurückgegeben (Chunk {i + 1}): {e}")
         chunk_results.append(data)
@@ -112,7 +119,9 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
             model_name=llm_service.model_name_for_tier(ModelTier.DEEP),
             prompt_version=SUMMARY_VERSION,
             prompt=prompt[:5000],
-            output_json=raw[:10000],
+            output_json=result.text[:10000],
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
         ))
 
     merged = _merge_summaries(chunk_results)
