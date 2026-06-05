@@ -21,6 +21,7 @@ def get_db():
 def init_db():
     Base.metadata.create_all(bind=engine)
     _create_fts_table()
+    _run_migrations()
 
 
 def _create_fts_table():
@@ -29,4 +30,30 @@ def _create_fts_table():
             CREATE VIRTUAL TABLE IF NOT EXISTS document_text_fts
             USING fts5(text, source_id UNINDEXED, page_number UNINDEXED)
         """))
+        conn.commit()
+
+
+def _run_migrations():
+    """Add new columns to existing tables. Safe to run on fresh and existing DBs."""
+    new_columns = [
+        ("findings", "evidence_quote TEXT NOT NULL DEFAULT ''"),
+        ("findings", "page_end INTEGER"),
+        ("findings", "validation_status TEXT NOT NULL DEFAULT 'no_evidence'"),
+        ("findings", "review_status TEXT NOT NULL DEFAULT 'unreviewed'"),
+        ("findings", "review_comment TEXT NOT NULL DEFAULT ''"),
+        ("findings", "reviewed_at DATETIME"),
+        ("findings", "reviewed_by TEXT NOT NULL DEFAULT 'local_user'"),
+        ("findings", "confidence_user INTEGER"),
+        ("summaries", "review_status TEXT NOT NULL DEFAULT 'unreviewed'"),
+        ("summaries", "review_comment TEXT NOT NULL DEFAULT ''"),
+        ("summaries", "reviewed_at DATETIME"),
+        ("summaries", "reviewed_by TEXT NOT NULL DEFAULT 'local_user'"),
+        ("summaries", "confidence_user INTEGER"),
+    ]
+    with engine.connect() as conn:
+        for table, col_def in new_columns:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col_def}"))
+            except Exception:
+                pass  # column already exists
         conn.commit()

@@ -74,3 +74,24 @@ def test_cascade_delete(db):
     db.commit()
     assert db.query(DocumentText).count() == 0
     assert db.query(Finding).count() == 0
+
+
+def test_finding_has_review_and_evidence_columns():
+    from sqlalchemy import inspect, create_engine
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    cols = {c["name"] for c in inspect(engine).get_columns("findings")}
+    for col in ("evidence_quote", "validation_status", "review_status",
+                "review_comment", "reviewed_at", "reviewed_by",
+                "confidence_user", "page_end"):
+        assert col in cols, f"Missing column: {col}"
+
+
+def test_summary_has_review_columns():
+    from sqlalchemy import inspect, create_engine
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    cols = {c["name"] for c in inspect(engine).get_columns("summaries")}
+    for col in ("review_status", "review_comment", "reviewed_at",
+                "reviewed_by", "confidence_user"):
+        assert col in cols, f"Missing column: {col}"
