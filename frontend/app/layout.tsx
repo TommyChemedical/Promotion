@@ -33,6 +33,9 @@ export default function RootLayout({
             <Link href="/matrix" className="text-sm text-gray-600 hover:text-gray-900">
               Matrix
             </Link>
+            <Link href="/research-map" className="text-sm text-gray-600 hover:text-gray-900">
+              Research-Map
+            </Link>
             <Link href="/settings" className="text-sm text-gray-600 hover:text-gray-900">
               Einstellungen
             </Link>
