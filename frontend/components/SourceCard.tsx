@@ -1,12 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Source } from "@/lib/api";
 
 export function SourceCard({ source }: { source: Source }) {
-  return (
-    <article className="relative bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-400 hover:shadow-sm transition-all">
-      {/* full-card clickable overlay */}
-      <Link href={`/sources/${source.id}`} className="absolute inset-0 block rounded-lg" aria-label={source.title} />
+  const router = useRouter();
 
+  return (
+    <article
+      onClick={() => router.push(`/sources/${source.id}`)}
+      className="cursor-pointer bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-400 hover:shadow-sm transition-all"
+    >
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1 min-w-0">
           <h2 className="font-medium text-gray-900 truncate">{source.title}</h2>
@@ -30,7 +35,8 @@ export function SourceCard({ source }: { source: Source }) {
         </div>
         <Link
           href={`/sources/${source.id}/review`}
-          className="relative z-10 flex-shrink-0 text-sm text-indigo-600 hover:text-indigo-900 underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+          className="flex-shrink-0 text-sm text-indigo-600 hover:text-indigo-900 underline-offset-2 hover:underline"
         >
           Prüfen
         </Link>
