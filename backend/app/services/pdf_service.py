@@ -4,6 +4,24 @@ from typing import Any
 import fitz
 
 
+def _fix_encoding(s: str) -> str:
+    """Repair strings where PDF/XMP UTF-8 bytes were misread as cp1252/Latin-1."""
+    import html as _html
+    s = _html.unescape(s)  # convert &#x80; etc. left by PyMuPDF XMP parser
+    for _ in range(3):
+        try:
+            fixed = s.encode("cp1252").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            try:
+                fixed = s.encode("latin-1").decode("utf-8")
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                break
+        if fixed == s:
+            break
+        s = fixed
+    return s
+
+
 def extract_text_from_pdf(file_bytes: bytes) -> list[dict[str, Any]]:
     try:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -33,8 +51,8 @@ def extract_metadata_from_pdf(file_bytes: bytes) -> dict[str, Any]:
         return {"title": "", "authors": "", "year": None, "doi": "", "journal": ""}
 
     meta = doc.metadata or {}
-    raw_title = meta.get("title", "") or ""
-    raw_author = meta.get("author", "") or ""
+    raw_title = _fix_encoding(meta.get("title", "") or "")
+    raw_author = _fix_encoding(meta.get("author", "") or "")
     raw_date = meta.get("creationDate", "") or ""
 
     year = None

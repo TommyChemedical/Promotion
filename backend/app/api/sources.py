@@ -60,6 +60,23 @@ async def upload_source(file: UploadFile = File(...), db: Session = Depends(get_
     return _source_to_read(source)
 
 
+@router.post("/repair-encoding", response_model=dict)
+def repair_encoding(db: Session = Depends(get_db)):
+    """Fix double-encoded UTF-8 titles/authors already stored in the DB."""
+    from app.services.pdf_service import _fix_encoding
+    sources = db.query(Source).all()
+    fixed = 0
+    for s in sources:
+        new_title = _fix_encoding(s.title or "")
+        new_authors = _fix_encoding(s.authors or "")
+        if new_title != s.title or new_authors != s.authors:
+            s.title = new_title
+            s.authors = new_authors
+            fixed += 1
+    db.commit()
+    return {"fixed": fixed, "total": len(sources)}
+
+
 @router.get("", response_model=list[SourceRead])
 def list_sources(db: Session = Depends(get_db)):
     sources = db.query(Source).order_by(Source.created_at.desc()).all()
@@ -172,8 +189,11 @@ def _source_to_detail(source: Source) -> SourceDetail:
         } for s in source.summaries],
         findings=[{
             "id": f.id, "claim": f.claim, "evidence_text": f.evidence_text or "",
-            "page_number": f.page_number, "relevance": f.relevance or "",
-            "confidence": f.confidence, "created_at": f.created_at,
+            "evidence_quote": f.evidence_quote or "", "page_number": f.page_number,
+            "relevance": f.relevance or "", "confidence": f.confidence,
+            "validation_status": f.validation_status or "no_evidence",
+            "review_status": f.review_status or "unreviewed",
+            "created_at": f.created_at,
         } for f in source.findings],
         notes=[{
             "id": n.id, "text": n.text, "linked_page_number": n.linked_page_number,
