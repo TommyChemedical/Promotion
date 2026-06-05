@@ -143,6 +143,60 @@ export interface EvidenceValidationResponse {
   results: { finding_id: number; validation_status: ValidationStatus }[];
 }
 
+// --- Matrix types ---
+
+export interface MatrixRow {
+  source_id: number;
+  source_title: string;
+  authors: string;
+  year: number | null;
+  doi: string;
+  journal: string;
+  source_review_status: string;
+  finding_id: number | null;
+  finding_statement: string | null;
+  finding_page_start: number | null;
+  finding_page_end: number | null;
+  evidence_quote: string | null;
+  validation_status: string | null;
+  validation_method: string | null;
+  validation_score: number | null;
+  finding_review_status: string | null;
+  finding_review_comment: string | null;
+  confidence_user: number | null;
+  summary_short: string | null;
+  summary_review_status: string | null;
+  tags: string[];
+  notes_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface MatrixResponse {
+  items: MatrixRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  filters_applied: Record<string, unknown>;
+}
+
+export interface MatrixFilters {
+  q?: string;
+  tag?: string[];
+  year_from?: number;
+  year_to?: number;
+  review_status?: string;
+  validation_status?: string;
+  has_evidence?: boolean;
+  only_reviewed?: boolean;
+  only_unreviewed?: boolean;
+  source_id?: number;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
 // --- HTTP helper ---
 
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
@@ -207,4 +261,38 @@ export const api = {
       `/api/review/source/${sourceId}/validate-evidence`,
       { method: "POST" }
     ),
+
+  // Matrix
+  getMatrix: (filters?: MatrixFilters) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      if (filters.q) params.set("q", filters.q);
+      if (filters.tag) filters.tag.forEach((t) => params.append("tag", t));
+      if (filters.year_from != null) params.set("year_from", String(filters.year_from));
+      if (filters.year_to != null) params.set("year_to", String(filters.year_to));
+      if (filters.review_status) params.set("review_status", filters.review_status);
+      if (filters.validation_status) params.set("validation_status", filters.validation_status);
+      if (filters.has_evidence != null) params.set("has_evidence", String(filters.has_evidence));
+      if (filters.only_reviewed) params.set("only_reviewed", "true");
+      if (filters.only_unreviewed) params.set("only_unreviewed", "true");
+      if (filters.source_id != null) params.set("source_id", String(filters.source_id));
+      if (filters.sort_by) params.set("sort_by", filters.sort_by);
+      if (filters.sort_order) params.set("sort_order", filters.sort_order);
+      if (filters.limit != null) params.set("limit", String(filters.limit));
+      if (filters.offset != null) params.set("offset", String(filters.offset));
+    }
+    const qs = params.toString();
+    return req<MatrixResponse>(`/api/matrix${qs ? `?${qs}` : ""}`);
+  },
+  getMatrixExportUrl: (format: "csv" | "md", filters?: MatrixFilters) => {
+    const params = new URLSearchParams();
+    if (filters) {
+      if (filters.q) params.set("q", filters.q);
+      if (filters.tag) filters.tag.forEach((t) => params.append("tag", t));
+      if (filters.review_status) params.set("review_status", filters.review_status);
+      if (filters.validation_status) params.set("validation_status", filters.validation_status);
+    }
+    const qs = params.toString();
+    return `${BASE}/api/matrix/export.${format}${qs ? `?${qs}` : ""}`;
+  },
 };
