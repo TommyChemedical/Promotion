@@ -67,4 +67,6 @@ def _run_migrations():
         conn.execute(text(
             "UPDATE findings SET page_start = page_number WHERE page_start IS NULL"
         ))
+        # New tables (research_areas, finding_research_areas, source_research_areas)
+        # are created by Base.metadata.create_all above — no ALTER needed.
         conn.commit()

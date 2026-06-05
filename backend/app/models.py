@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -171,6 +171,7 @@ class ResearchArea(Base):
 
 class FindingResearchArea(Base):
     __tablename__ = "finding_research_areas"
+    __table_args__ = (UniqueConstraint("finding_id", "research_area_id", name="uq_finding_area"),)
 
     id = Column(Integer, primary_key=True, index=True)
     finding_id = Column(Integer, ForeignKey("findings.id"), nullable=False)

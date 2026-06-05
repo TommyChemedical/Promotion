@@ -69,3 +69,31 @@ def test_source_research_area_model(db):
     db.add(link)
     db.commit()
     assert link.id is not None
+
+
+def test_research_area_unique_constraint(db):
+    """No unique constraint — multiple areas can share a title."""
+    a1 = ResearchArea(title="Same", area_type="other", sort_order=0)
+    a2 = ResearchArea(title="Same", area_type="other", sort_order=1)
+    db.add_all([a1, a2])
+    db.commit()
+    assert a1.id != a2.id
+
+
+def test_finding_research_area_unique_pair(db):
+    """Same finding+area pair should raise IntegrityError on second insert."""
+    from sqlalchemy.exc import IntegrityError
+    src = Source(title="T", filename="f.pdf", file_path="/f.pdf")
+    db.add(src)
+    db.flush()
+    f = Finding(source_id=src.id, claim="C", evidence_text="", confidence="low")
+    db.add(f)
+    db.flush()
+    area = ResearchArea(title="A", area_type="other", sort_order=0)
+    db.add(area)
+    db.flush()
+    db.add(FindingResearchArea(finding_id=f.id, research_area_id=area.id, relevance="central", relation_type="supports"))
+    db.commit()
+    db.add(FindingResearchArea(finding_id=f.id, research_area_id=area.id, relevance="useful", relation_type="other"))
+    with pytest.raises(IntegrityError):
+        db.commit()
