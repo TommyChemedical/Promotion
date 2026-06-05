@@ -30,6 +30,9 @@ export default function RootLayout({
             <Link href="/export" className="text-sm text-gray-600 hover:text-gray-900">
               Export
             </Link>
+            <Link href="/matrix" className="text-sm text-gray-600 hover:text-gray-900">
+              Matrix
+            </Link>
           </div>
         </nav>
         <main className="max-w-5xl mx-auto px-6 py-8">{children}</main>
