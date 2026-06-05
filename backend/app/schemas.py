@@ -182,3 +182,57 @@ class EvidenceValidationResponse(BaseModel):
     source_id: int
     validated: int
     results: list[EvidenceValidationResult]
+
+
+# --- Matrix types ---
+
+class MatrixRow(BaseModel):
+    source_id: int
+    source_title: str
+    authors: str
+    year: Optional[int]
+    doi: str
+    journal: str
+    source_review_status: str
+    finding_id: Optional[int]
+    finding_statement: Optional[str]
+    finding_page_start: Optional[int]
+    finding_page_end: Optional[int]
+    evidence_quote: Optional[str]
+    validation_status: Optional[str]
+    validation_method: Optional[str]
+    validation_score: Optional[float]
+    finding_review_status: Optional[str]
+    finding_review_comment: Optional[str]
+    confidence_user: Optional[int]
+    summary_short: Optional[str]
+    summary_review_status: Optional[str]
+    tags: list[str]
+    notes_count: int
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+
+class MatrixFilters(BaseModel):
+    q: Optional[str] = None
+    tag: list[str] = Field(default_factory=list)
+    year_from: Optional[int] = None
+    year_to: Optional[int] = None
+    review_status: Optional[str] = None
+    validation_status: Optional[str] = None
+    has_evidence: Optional[bool] = None
+    only_reviewed: bool = False
+    only_unreviewed: bool = False
+    source_id: Optional[int] = None
+    sort_by: str = "created_at"
+    sort_order: str = "desc"
+    limit: int = Field(100, ge=1, le=500)
+    offset: int = Field(0, ge=0)
+
+
+class MatrixResponse(BaseModel):
+    items: list[MatrixRow]
+    total: int
+    limit: int
+    offset: int
+    filters_applied: dict
