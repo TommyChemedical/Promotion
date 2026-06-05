@@ -25,12 +25,20 @@ export function SourceCard({ source }: { source: Source }) {
             </div>
           )}
         </div>
-        <Link
-          href={`/sources/${source.id}`}
-          className="flex-shrink-0 text-sm text-gray-600 hover:text-gray-900 underline-offset-2 hover:underline"
-        >
-          Details
-        </Link>
+        <div className="flex flex-shrink-0 flex-col items-end gap-1">
+          <Link
+            href={`/sources/${source.id}`}
+            className="text-sm text-gray-600 hover:text-gray-900 underline-offset-2 hover:underline"
+          >
+            Details
+          </Link>
+          <Link
+            href={`/sources/${source.id}/review`}
+            className="text-sm text-indigo-600 hover:text-indigo-900 underline-offset-2 hover:underline"
+          >
+            Prüfen
+          </Link>
+        </div>
       </div>
     </article>
   );
