@@ -87,7 +87,7 @@ export function ReviewPage({ source, reviewData: initial }: Props) {
           </h2>
           <div className="flex flex-col gap-4">
             {findings.map((f) => (
-              <FindingReviewCard key={f.id} finding={f} />
+              <FindingReviewCard key={`${f.id}-${f.validated_at ?? "0"}`} finding={f} />
             ))}
           </div>
         </section>

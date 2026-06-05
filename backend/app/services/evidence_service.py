@@ -36,7 +36,7 @@ def _split_clauses(text: str) -> list:
 
 
 def _sliding_fuzzy(quote: str, text: str) -> float:
-    window = len(quote) + 10
+    window = len(quote) + max(5, len(quote) // 10)
     if len(text) <= window:
         return SequenceMatcher(None, quote, text).ratio()
     step = max(1, len(quote) // 4)
@@ -73,8 +73,18 @@ def validate_finding_evidence(finding: Finding, db: Session) -> ValidationResult
     if doc_text is None:
         return ValidationResult(status="invalid_page", method="none", score=0.0)
 
+    page_text = doc_text.text
+    if finding.page_end is not None and finding.page_end > page_start:
+        next_doc = (
+            db.query(DocumentText)
+            .filter_by(source_id=finding.source_id, page_number=finding.page_end)
+            .first()
+        )
+        if next_doc is not None:
+            page_text = page_text + " " + next_doc.text
+
     norm_quote = _normalize(finding.evidence_quote)
-    norm_text = _normalize(doc_text.text)
+    norm_text = _normalize(page_text)
 
     if norm_quote in norm_text:
         return ValidationResult(status="evidence_found", method="exact", score=1.0)
