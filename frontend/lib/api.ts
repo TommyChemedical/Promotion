@@ -29,6 +29,7 @@ export interface Finding {
   review_status: string;
   relevance: string;
   created_at: string;
+  research_area_ids: number[];
 }
 
 export interface Note {

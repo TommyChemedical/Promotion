@@ -53,6 +53,7 @@ class FindingRead(BaseModel):
     reviewed_by: Optional[str] = None
     confidence_user: Optional[int] = None
     created_at: datetime
+    research_area_ids: list[int] = []
 
     model_config = {"from_attributes": True}
 

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session, selectinload
 from app.database import get_db, engine
-from app.models import Source, DocumentText, SourceTag, Tag, Finding, Note
+from app.models import Source, DocumentText, SourceTag, Tag, Finding, Note, FindingResearchArea
 from app.schemas import SourceRead, SourceDetail, FindingCreate, FindingRead, NoteCreate, NoteRead, TagCreate
 from app.services.pdf_service import extract_text_from_pdf, extract_metadata_from_pdf
 from app.services.search_service import index_document_text
@@ -90,7 +90,7 @@ def get_source(source_id: int, db: Session = Depends(get_db)):
         .options(
             selectinload(Source.texts),
             selectinload(Source.summaries),
-            selectinload(Source.findings),
+            selectinload(Source.findings).selectinload(Finding.research_area_links),
             selectinload(Source.notes),
             selectinload(Source.source_tags).selectinload(SourceTag.tag),
         )
@@ -194,6 +194,7 @@ def _source_to_detail(source: Source) -> SourceDetail:
             "validation_status": f.validation_status or "no_evidence",
             "review_status": f.review_status or "unreviewed",
             "created_at": f.created_at,
+            "research_area_ids": [link.research_area_id for link in f.research_area_links],
         } for f in source.findings],
         notes=[{
             "id": n.id, "text": n.text, "linked_page_number": n.linked_page_number,
