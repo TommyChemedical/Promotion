@@ -5,7 +5,7 @@ export function SourceCard({ source }: { source: Source }) {
   return (
     <article className="relative bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-400 hover:shadow-sm transition-all">
       {/* full-card clickable overlay */}
-      <Link href={`/sources/${source.id}`} className="absolute inset-0 rounded-lg" aria-label={source.title} />
+      <Link href={`/sources/${source.id}`} className="absolute inset-0 block rounded-lg" aria-label={source.title} />
 
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1 min-w-0">
