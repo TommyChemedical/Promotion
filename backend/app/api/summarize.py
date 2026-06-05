@@ -12,8 +12,8 @@ from app.services.evidence_service import validate_finding_evidence
 
 logger = logging.getLogger(__name__)
 
-CHUNK_SIZE = 8_000   # max chars per LLM chunk
-MAX_CHUNKS = 10      # safety cap to avoid runaway API costs
+CHUNK_SIZE = 12_000  # max chars per LLM chunk
+MAX_CHUNKS = 6       # safety cap: ~72k chars covers most papers in ≤6 API calls
 
 router = APIRouter(prefix="/api/sources", tags=["summarize"])
 
