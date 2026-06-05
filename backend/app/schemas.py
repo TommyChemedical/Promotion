@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -235,4 +235,4 @@ class MatrixResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    filters_applied: dict
+    filters_applied: dict[str, Any]
