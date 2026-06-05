@@ -347,3 +347,68 @@ def test_list_findings_filter_review_status(area_with_finding):
 
     r2 = client.get(f"/api/research-areas/{area_id}/findings?review_status=incorrect")
     assert len(r2.json()) == 0
+
+
+def test_overview_counts(area_with_finding):
+    client, Session, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.get(f"/api/research-areas/{area_id}/overview")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["count_findings_total"] == 1
+    assert data["count_findings_correct"] == 1
+    assert data["count_evidence_found"] == 1
+    assert data["count_sources"] == 1
+    assert data["relevance_counts"]["central"] == 1
+    assert data["relation_type_counts"]["supports"] == 1
+
+
+def test_overview_gaps_unreviewed(area_with_finding):
+    """Gap 'Viele unreviewed Findings' appears when majority are unreviewed."""
+    client, Session, area_id, _, _ = area_with_finding
+    with Session() as session:
+        src = Source(title="S2", filename="s2.pdf", file_path="/s2.pdf")
+        session.add(src)
+        session.flush()
+        f2 = Finding(source_id=src.id, claim="Unreviewed", evidence_text="",
+                     confidence="low", review_status="unreviewed",
+                     validation_status="no_evidence")
+        session.add(f2)
+        session.commit()
+        f2_id = f2.id
+
+    area2 = client.post("/api/research-areas", json={"title": "B", "area_type": "other", "sort_order": 0}).json()
+    client.post(f"/api/research-areas/{area2['id']}/findings", json={
+        "finding_id": f2_id, "relevance": "useful", "relation_type": "other"
+    })
+    r = client.get(f"/api/research-areas/{area2['id']}/overview")
+    assert "Viele unreviewed Findings" in r.json()["gaps"]
+
+
+def test_overview_gaps_no_central(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "marginal", "relation_type": "other"
+    })
+    r = client.get(f"/api/research-areas/{area_id}/overview")
+    assert "Keine zentralen Findings" in r.json()["gaps"]
+
+
+def test_overview_gaps_single_source(area_with_finding):
+    client, _, area_id, finding_id, _ = area_with_finding
+    client.post(f"/api/research-areas/{area_id}/findings", json={
+        "finding_id": finding_id, "relevance": "central", "relation_type": "supports"
+    })
+    r = client.get(f"/api/research-areas/{area_id}/overview")
+    assert "Nur eine Quelle in diesem Bereich" in r.json()["gaps"]
+
+
+def test_overview_empty_area(area_with_finding):
+    client, _, area_id, _, _ = area_with_finding
+    r = client.get(f"/api/research-areas/{area_id}/overview")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["count_findings_total"] == 0
+    assert data["gaps"] == []

@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
@@ -7,6 +8,7 @@ from app.models import ResearchArea, Finding, FindingResearchArea, SourceTag
 from app.schemas import (
     ResearchAreaCreate, ResearchAreaRead, ResearchAreaUpdate,
     FindingAssignCreate, FindingAssignUpdate, ResearchAreaFindingEntry,
+    ResearchAreaOverview, TopSourceEntry,
 )
 
 router = APIRouter(prefix="/api/research-areas", tags=["research-areas"])
@@ -122,6 +124,77 @@ def delete_area(area_id: int, db: Session = Depends(get_db)):
     db.delete(area)  # cascade deletes FindingResearchArea + SourceResearchArea
     db.commit()
     return {"ok": True}
+
+
+@router.get("/{area_id}/overview", response_model=ResearchAreaOverview)
+def get_area_overview(area_id: int, db: Session = Depends(get_db)):
+    area = _get_area_or_404(area_id, db)
+    links = _load_links(area_id, db, {"include_unreviewed": True})
+
+    if not links:
+        return ResearchAreaOverview(
+            area_id=area_id, area_title=area.title, area_type=area.area_type,
+            count_findings_total=0, count_findings_correct=0,
+            count_findings_partially_correct=0, count_findings_unreviewed=0,
+            count_evidence_found=0, count_evidence_missing=0,
+            count_sources=0, relation_type_counts={}, relevance_counts={},
+            top_sources=[], gaps=[],
+        )
+
+    findings = [link.finding for link in links]
+    sources = {f.source_id: f.source for f in findings}
+
+    count_total = len(findings)
+    count_correct = sum(1 for f in findings if f.review_status == "correct")
+    count_partial = sum(1 for f in findings if f.review_status == "partially_correct")
+    count_unreviewed = sum(1 for f in findings if f.review_status == "unreviewed")
+    count_evidence_found = sum(1 for f in findings if f.validation_status == "evidence_found")
+    count_evidence_missing = count_total - count_evidence_found
+
+    relation_type_counts = dict(Counter(link.relation_type for link in links))
+    relevance_counts = dict(Counter(link.relevance for link in links))
+
+    source_finding_count = Counter(f.source_id for f in findings)
+    top_sources = [
+        TopSourceEntry(
+            source_id=src_id,
+            source_title=sources[src_id].title,
+            authors=sources[src_id].authors or "",
+            year=sources[src_id].year,
+            finding_count=cnt,
+        )
+        for src_id, cnt in source_finding_count.most_common(5)
+    ]
+
+    gaps: list[str] = []
+    if count_total > 0:
+        if count_unreviewed > count_total * 0.5:
+            gaps.append("Viele unreviewed Findings")
+        if count_evidence_missing > count_total * 0.5:
+            gaps.append("Viele Findings ohne validierten Beleg")
+        if relevance_counts.get("central", 0) == 0:
+            gaps.append("Keine zentralen Findings")
+        if relation_type_counts.get("contradicts", 0) > 2:
+            gaps.append("Viele widersprechende Findings")
+        if len(sources) == 1:
+            gaps.append("Nur eine Quelle in diesem Bereich")
+
+    return ResearchAreaOverview(
+        area_id=area_id,
+        area_title=area.title,
+        area_type=area.area_type,
+        count_findings_total=count_total,
+        count_findings_correct=count_correct,
+        count_findings_partially_correct=count_partial,
+        count_findings_unreviewed=count_unreviewed,
+        count_evidence_found=count_evidence_found,
+        count_evidence_missing=count_evidence_missing,
+        count_sources=len(sources),
+        relation_type_counts=relation_type_counts,
+        relevance_counts=relevance_counts,
+        top_sources=top_sources,
+        gaps=gaps,
+    )
 
 
 @router.post("/{area_id}/findings", response_model=ResearchAreaFindingEntry, status_code=201)
