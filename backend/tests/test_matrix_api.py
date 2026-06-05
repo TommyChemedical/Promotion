@@ -187,3 +187,60 @@ def test_build_response_filters_applied(matrix_db):
     filtered = apply_filters(rows, filters)
     resp = build_response(filtered, filters, rows)
     assert resp.filters_applied.get("q") == "Alpha"
+
+
+from fastapi.testclient import TestClient
+from app.main import app
+from app.database import get_db
+
+
+@pytest.fixture
+def matrix_client(matrix_db):
+    def override_db():
+        yield matrix_db
+
+    app.dependency_overrides[get_db] = override_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+def test_get_matrix_200(matrix_client):
+    r = matrix_client.get("/api/matrix")
+    assert r.status_code == 200
+    data = r.json()
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] == 2
+
+
+def test_get_matrix_filter_q(matrix_client):
+    r = matrix_client.get("/api/matrix?q=Alpha")
+    assert r.status_code == 200
+    assert r.json()["total"] == 1
+
+
+def test_get_matrix_export_csv(matrix_client):
+    r = matrix_client.get("/api/matrix/export.csv")
+    assert r.status_code == 200
+    assert "text/csv" in r.headers["content-type"]
+    assert "source_id" in r.text
+
+
+def test_get_matrix_export_md(matrix_client):
+    r = matrix_client.get("/api/matrix/export.md")
+    assert r.status_code == 200
+    assert "Alpha Study" in r.text
+
+
+def test_get_matrix_invalid_limit(matrix_client):
+    r = matrix_client.get("/api/matrix?limit=0")
+    assert r.status_code == 422
+
+
+def test_get_matrix_pagination(matrix_client):
+    r = matrix_client.get("/api/matrix?limit=1&offset=0")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["items"]) == 1
+    assert data["total"] == 2
