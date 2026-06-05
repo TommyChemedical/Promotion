@@ -27,6 +27,7 @@ class Source(Base):
     notes = relationship("Note", back_populates="source", cascade="all, delete-orphan")
     llm_runs = relationship("LLMRun", back_populates="source", cascade="all, delete-orphan")
     source_tags = relationship("SourceTag", back_populates="source", cascade="all, delete-orphan")
+    research_area_links = relationship("SourceResearchArea", back_populates="source", cascade="all, delete-orphan")
 
 
 class DocumentText(Base):
@@ -108,6 +109,7 @@ class Finding(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     source = relationship("Source", back_populates="findings")
+    research_area_links = relationship("FindingResearchArea", back_populates="finding", cascade="all, delete-orphan")
 
 
 class Note(Base):
@@ -138,3 +140,61 @@ class LLMRun(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     source = relationship("Source", back_populates="llm_runs")
+
+
+AREA_TYPES = ("research_question", "chapter", "theme", "argument",
+              "method", "theory", "literature_gap", "other")
+
+RELEVANCE_VALUES = ("central", "useful", "marginal", "context_only", "do_not_use")
+
+RELATION_TYPES = ("supports", "contradicts", "differentiates", "defines",
+                  "method", "theory", "evidence", "limitation",
+                  "research_gap", "background", "other")
+
+
+class ResearchArea(Base):
+    __tablename__ = "research_areas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, default="")
+    area_type = Column(String, nullable=False, default="other")
+    parent_id = Column(Integer, ForeignKey("research_areas.id"), nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    parent = relationship("ResearchArea", remote_side="ResearchArea.id", foreign_keys="[ResearchArea.parent_id]")
+    finding_links = relationship("FindingResearchArea", back_populates="research_area", cascade="all, delete-orphan")
+    source_links = relationship("SourceResearchArea", back_populates="research_area", cascade="all, delete-orphan")
+
+
+class FindingResearchArea(Base):
+    __tablename__ = "finding_research_areas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    finding_id = Column(Integer, ForeignKey("findings.id"), nullable=False)
+    research_area_id = Column(Integer, ForeignKey("research_areas.id"), nullable=False)
+    relevance = Column(String, nullable=False, default="useful")
+    relation_type = Column(String, nullable=False, default="other")
+    user_comment = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    finding = relationship("Finding", back_populates="research_area_links")
+    research_area = relationship("ResearchArea", back_populates="finding_links")
+
+
+class SourceResearchArea(Base):
+    __tablename__ = "source_research_areas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_id = Column(Integer, ForeignKey("sources.id"), nullable=False)
+    research_area_id = Column(Integer, ForeignKey("research_areas.id"), nullable=False)
+    relevance = Column(String, nullable=False, default="useful")
+    user_comment = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    source = relationship("Source", back_populates="research_area_links")
+    research_area = relationship("ResearchArea", back_populates="source_links")
