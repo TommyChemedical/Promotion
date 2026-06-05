@@ -217,8 +217,9 @@ def assign_finding(area_id: int, body: FindingAssignCreate, db: Session = Depend
         db.rollback()
         raise HTTPException(409, "Finding ist dieser Area bereits zugeordnet")
     db.refresh(link)
+    link_id = link.id
     links = _load_links(area_id, db, {"include_unreviewed": True})
-    link = next(lk for lk in links if lk.id == link.id)
+    link = next(lk for lk in links if lk.id == link_id)
     return _build_finding_entry(link)
 
 

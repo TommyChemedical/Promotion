@@ -78,7 +78,8 @@ export function ResearchAreaDetailPage({ area, initialOverview, initialEntries }
         </h2>
         <ResearchAreaFindingTable
           areaId={area.id}
-          initialEntries={entries}
+          entries={entries}
+          onEntryRemoved={(fid) => setEntries((prev) => prev.filter((e) => e.finding_id !== fid))}
         />
       </section>
 

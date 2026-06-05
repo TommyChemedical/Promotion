@@ -32,11 +32,11 @@ const REVIEW_STYLES: Record<string, string> = {
 
 interface Props {
   areaId: number;
-  initialEntries: ResearchAreaFindingEntry[];
+  entries: ResearchAreaFindingEntry[];
+  onEntryRemoved: (findingId: number) => void;
 }
 
-export function ResearchAreaFindingTable({ areaId, initialEntries }: Props) {
-  const [entries, setEntries] = useState<ResearchAreaFindingEntry[]>(initialEntries);
+export function ResearchAreaFindingTable({ areaId, entries, onEntryRemoved }: Props) {
   const [filterReview, setFilterReview] = useState("");
   const [filterRelation, setFilterRelation] = useState("");
   const [filterRelevance, setFilterRelevance] = useState("");
@@ -47,7 +47,7 @@ export function ResearchAreaFindingTable({ areaId, initialEntries }: Props) {
     if (!confirm("Zuordnung entfernen?")) return;
     try {
       await api.removeFindingAssignment(areaId, entry.finding_id);
-      setEntries((prev) => prev.filter((e) => e.finding_id !== entry.finding_id));
+      onEntryRemoved(entry.finding_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler");
     }
