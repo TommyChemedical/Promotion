@@ -80,3 +80,40 @@ def test_none_page_number(db_session):
     session, source_id = db_session
     f = _finding(source_id, "significant reduction in pain scores", page=None)
     assert validate_finding_evidence(f, session) == "evidence_not_found"
+
+
+def test_whitespace_only_quote(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "   ")
+    assert validate_finding_evidence(f, session) == "no_evidence"
+
+
+def test_page_preview_no_evidence_quote(db_session):
+    session, source_id = db_session
+    from app.services.evidence_service import get_page_preview
+    preview = get_page_preview(source_id, 1, session, evidence_quote="", max_len=50)
+    assert len(preview) <= 50
+    assert preview != ""  # page 1 exists, should return start of text
+
+
+def test_page_preview_with_quote(db_session):
+    session, source_id = db_session
+    from app.services.evidence_service import get_page_preview
+    preview = get_page_preview(source_id, 1, session,
+                               evidence_quote="significant reduction in pain scores",
+                               max_len=300)
+    assert "reduction" in preview.lower()
+
+
+def test_page_preview_none_page(db_session):
+    session, source_id = db_session
+    from app.services.evidence_service import get_page_preview
+    preview = get_page_preview(source_id, None, session)
+    assert preview == ""
+
+
+def test_page_preview_respects_max_len(db_session):
+    session, source_id = db_session
+    from app.services.evidence_service import get_page_preview
+    preview = get_page_preview(source_id, 1, session, max_len=10)
+    assert len(preview) <= 10

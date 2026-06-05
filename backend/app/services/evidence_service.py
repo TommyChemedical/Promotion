@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.models import Finding, DocumentText
@@ -9,12 +10,13 @@ def _normalize(text: str) -> str:
 
 
 def _word_overlap(quote_norm: str, text_norm: str) -> float:
-    """Fraction of quote words that appear in text words."""
-    q_words = set(quote_norm.split())
-    if not q_words:
+    """Fraction of quote words (with repetition) found in text."""
+    q_counts = Counter(quote_norm.split())
+    if not q_counts:
         return 0.0
-    t_words = set(text_norm.split())
-    return len(q_words & t_words) / len(q_words)
+    t_counts = Counter(text_norm.split())
+    matched = sum((q_counts & t_counts).values())
+    return matched / sum(q_counts.values())
 
 
 def validate_finding_evidence(finding: Finding, db: Session) -> str:
@@ -65,9 +67,12 @@ def get_page_preview(source_id: int, page_number: Optional[int], db: Session,
     if doc_text is None:
         return ""
     text = doc_text.text
-    if evidence_quote:
-        first_word = evidence_quote.lower().split()[0] if evidence_quote.split() else ""
-        idx = text.lower().find(first_word) if first_word else -1
+    if evidence_quote and evidence_quote.strip():
+        # Use the first few normalised words as the anchor for the preview
+        norm_q = _normalize(evidence_quote)
+        norm_t = _normalize(text)
+        anchor = " ".join(norm_q.split()[:5])
+        idx = norm_t.find(anchor) if anchor else -1
         if idx >= 0:
             start = max(0, idx - 50)
             return text[start: start + max_len]
