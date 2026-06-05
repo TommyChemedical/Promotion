@@ -22,8 +22,11 @@ export interface Finding {
   id: number;
   claim: string;
   evidence_text: string;
+  evidence_quote: string;
   page_number: number | null;
   confidence: "low" | "medium" | "high";
+  validation_status: string;
+  review_status: string;
   relevance: string;
   created_at: string;
 }

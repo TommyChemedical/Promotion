@@ -50,6 +50,40 @@ export default async function SourceDetailPage({
         <SummaryPanel sourceId={source.id} initialSummaries={source.summaries} />
       </div>
 
+      {/* Findings */}
+      {source.findings.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3">Findings</h2>
+          <ul className="space-y-3">
+            {source.findings.map((f) => (
+              <li key={f.id} className="bg-white border border-gray-200 rounded-lg p-4 text-sm">
+                <div className="flex items-start gap-2 mb-1">
+                  <span className={`text-xs px-1.5 py-0.5 rounded border font-medium flex-shrink-0 mt-0.5 ${
+                    f.confidence === "high" ? "text-green-700 bg-green-50 border-green-200" :
+                    f.confidence === "medium" ? "text-yellow-700 bg-yellow-50 border-yellow-200" :
+                    "text-red-700 bg-red-50 border-red-200"
+                  }`}>{f.confidence.toUpperCase()}</span>
+                  <span className="font-medium text-gray-900">{f.claim}</span>
+                </div>
+                {f.evidence_quote && (
+                  <blockquote className="mt-1 pl-3 border-l-2 border-gray-200 text-gray-500 italic text-xs">
+                    „{f.evidence_quote}"
+                    {f.page_number ? ` (S. ${f.page_number})` : ""}
+                  </blockquote>
+                )}
+                {f.validation_status && f.validation_status !== "no_evidence" && (
+                  <span className={`mt-2 inline-block text-xs px-1.5 py-0.5 rounded ${
+                    f.validation_status === "evidence_found" ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"
+                  }`}>
+                    {f.validation_status === "evidence_found" ? "Beleg verifiziert" : "Beleg nicht gefunden"}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Notes */}
       {source.notes.length > 0 && (
         <section>
