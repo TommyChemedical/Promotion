@@ -50,29 +50,6 @@ export default async function SourceDetailPage({
         <SummaryPanel sourceId={source.id} initialSummaries={source.summaries} />
       </div>
 
-      {/* Findings */}
-      {source.findings.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold mb-3">Findings</h2>
-          <ul className="space-y-3">
-            {source.findings.map((f) => (
-              <li key={f.id} className="bg-white border border-gray-200 rounded-lg p-4 text-sm">
-                <div className="font-medium text-gray-900">{f.claim}</div>
-                {f.evidence_text && (
-                  <blockquote className="mt-1 text-gray-500 italic border-l-2 border-gray-200 pl-3">
-                    „{f.evidence_text}"
-                    {f.page_number ? ` (S. ${f.page_number})` : ""}
-                  </blockquote>
-                )}
-                <span className="text-xs text-gray-400 mt-1 inline-block">
-                  Konfidenz: {f.confidence}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {/* Notes */}
       {source.notes.length > 0 && (
         <section>
