@@ -24,6 +24,9 @@ def _parse_filters(
     only_reviewed: bool = Query(False),
     only_unreviewed: bool = Query(False),
     source_id: Optional[int] = Query(None),
+    research_area_id: Optional[int] = Query(None),
+    relation_type: Optional[str] = Query(None),
+    relevance: Optional[str] = Query(None),
     sort_by: str = Query("updated_at"),
     sort_order: str = Query("desc"),
     limit: int = Query(100, ge=1, le=500),
@@ -34,6 +37,8 @@ def _parse_filters(
         review_status=review_status, validation_status=validation_status,
         has_evidence=has_evidence, only_reviewed=only_reviewed,
         only_unreviewed=only_unreviewed, source_id=source_id,
+        research_area_id=research_area_id, relation_type=relation_type,
+        relevance=relevance,
         sort_by=sort_by, sort_order=sort_order, limit=limit, offset=offset,
     )
 

@@ -1,4 +1,5 @@
 from app.schemas import MatrixRow, MatrixFilters, MatrixResponse
+from app.models import ResearchArea, FindingResearchArea
 
 def test_matrix_schemas_importable():
     row = MatrixRow(
@@ -244,3 +245,87 @@ def test_get_matrix_pagination(matrix_client):
     data = r.json()
     assert len(data["items"]) == 1
     assert data["total"] == 2
+
+
+def test_matrix_row_contains_research_areas(matrix_db):
+    """Matrix rows for findings include their research area assignments."""
+    area = ResearchArea(title="Kapitel 1", area_type="chapter", sort_order=0)
+    matrix_db.add(area)
+    matrix_db.flush()
+    from app.models import Finding
+    finding = matrix_db.query(Finding).first()
+    link = FindingResearchArea(
+        finding_id=finding.id, research_area_id=area.id,
+        relevance="central", relation_type="supports",
+    )
+    matrix_db.add(link)
+    matrix_db.commit()
+
+    rows = build_matrix_rows(matrix_db)
+    row = next(r for r in rows if r.finding_id == finding.id)
+    assert len(row.research_areas) == 1
+    assert row.research_areas[0]["title"] == "Kapitel 1"
+    assert row.research_areas[0]["relevance"] == "central"
+
+
+def test_filter_by_research_area_id(matrix_db):
+    area = ResearchArea(title="A", area_type="theme", sort_order=0)
+    matrix_db.add(area)
+    matrix_db.flush()
+    from app.models import Finding
+    finding = matrix_db.query(Finding).first()
+    matrix_db.add(FindingResearchArea(
+        finding_id=finding.id, research_area_id=area.id,
+        relevance="useful", relation_type="other",
+    ))
+    matrix_db.commit()
+
+    rows = build_matrix_rows(matrix_db)
+    filtered = apply_filters(rows, MatrixFilters(research_area_id=area.id))
+    assert len(filtered) == 1
+    assert filtered[0].finding_id == finding.id
+
+
+def test_filter_by_relation_type(matrix_db):
+    area = ResearchArea(title="A", area_type="theme", sort_order=0)
+    matrix_db.add(area)
+    matrix_db.flush()
+    from app.models import Finding
+    finding = matrix_db.query(Finding).first()
+    matrix_db.add(FindingResearchArea(
+        finding_id=finding.id, research_area_id=area.id,
+        relevance="central", relation_type="contradicts",
+    ))
+    matrix_db.commit()
+
+    rows = build_matrix_rows(matrix_db)
+    filtered = apply_filters(rows, MatrixFilters(relation_type="contradicts"))
+    assert len(filtered) == 1
+
+    filtered2 = apply_filters(rows, MatrixFilters(relation_type="supports"))
+    assert len(filtered2) == 0
+
+
+def test_filter_by_relevance(matrix_db):
+    area = ResearchArea(title="A", area_type="theme", sort_order=0)
+    matrix_db.add(area)
+    matrix_db.flush()
+    from app.models import Finding
+    finding = matrix_db.query(Finding).first()
+    matrix_db.add(FindingResearchArea(
+        finding_id=finding.id, research_area_id=area.id,
+        relevance="do_not_use", relation_type="other",
+    ))
+    matrix_db.commit()
+
+    rows = build_matrix_rows(matrix_db)
+    filtered = apply_filters(rows, MatrixFilters(relevance="do_not_use"))
+    assert len(filtered) == 1
+
+    filtered2 = apply_filters(rows, MatrixFilters(relevance="central"))
+    assert len(filtered2) == 0
+
+
+def test_matrix_export_csv_contains_research_areas(matrix_client):
+    r = matrix_client.get("/api/matrix/export.csv")
+    assert "research_areas" in r.text

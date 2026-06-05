@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from sqlalchemy.orm import Session, selectinload
-from app.models import Source, SourceTag
+from app.models import Source, SourceTag, Finding, FindingResearchArea
 from app.schemas import MatrixRow, MatrixFilters, MatrixResponse
 
 
@@ -10,7 +10,7 @@ def build_matrix_rows(db: Session) -> list[MatrixRow]:
         db.query(Source)
         .options(
             selectinload(Source.summaries),
-            selectinload(Source.findings),
+            selectinload(Source.findings).selectinload(Finding.research_area_links).selectinload(FindingResearchArea.research_area),
             selectinload(Source.notes),
             selectinload(Source.source_tags).selectinload(SourceTag.tag),
         )
@@ -35,6 +35,16 @@ def build_matrix_rows(db: Session) -> list[MatrixRow]:
         if src.findings:
             for f in src.findings:
                 updated_at = f.reviewed_at if f.reviewed_at else src.updated_at
+                research_areas = [
+                    {
+                        "research_area_id": link.research_area_id,
+                        "title": link.research_area.title if link.research_area else "",
+                        "area_type": link.research_area.area_type if link.research_area else "",
+                        "relevance": link.relevance,
+                        "relation_type": link.relation_type,
+                    }
+                    for link in f.research_area_links
+                ]
                 rows.append(MatrixRow(
                     source_id=src.id,
                     source_title=src.title,
@@ -60,6 +70,7 @@ def build_matrix_rows(db: Session) -> list[MatrixRow]:
                     notes_count=notes_count,
                     created_at=src.created_at,
                     updated_at=updated_at,
+                    research_areas=research_areas,
                 ))
         else:
             rows.append(MatrixRow(
@@ -87,6 +98,7 @@ def build_matrix_rows(db: Session) -> list[MatrixRow]:
                 notes_count=notes_count,
                 created_at=src.created_at,
                 updated_at=src.updated_at,
+                research_areas=[],
             ))
     return rows
 
@@ -146,6 +158,24 @@ def apply_filters(rows: list[MatrixRow], filters: MatrixFilters) -> list[MatrixR
     if filters.source_id is not None:
         result = [r for r in result if r.source_id == filters.source_id]
 
+    if filters.research_area_id is not None:
+        result = [
+            r for r in result
+            if any(ra["research_area_id"] == filters.research_area_id for ra in r.research_areas)
+        ]
+
+    if filters.relation_type:
+        result = [
+            r for r in result
+            if any(ra["relation_type"] == filters.relation_type for ra in r.research_areas)
+        ]
+
+    if filters.relevance:
+        result = [
+            r for r in result
+            if any(ra["relevance"] == filters.relevance for ra in r.research_areas)
+        ]
+
     _SORT_KEYS = {
         "year": lambda r: (r.year is None, r.year or 0),
         "title": lambda r: (r.source_title or "").lower(),
@@ -189,6 +219,12 @@ def build_response(
         filters_applied["only_unreviewed"] = True
     if filters.source_id is not None:
         filters_applied["source_id"] = filters.source_id
+    if filters.research_area_id is not None:
+        filters_applied["research_area_id"] = filters.research_area_id
+    if filters.relation_type:
+        filters_applied["relation_type"] = filters.relation_type
+    if filters.relevance:
+        filters_applied["relevance"] = filters.relevance
 
     return MatrixResponse(
         items=page,
@@ -217,7 +253,7 @@ def export_matrix_csv(rows: list[MatrixRow]) -> str:
         "finding_page_start", "finding_page_end", "evidence_quote",
         "validation_status", "validation_method", "validation_score",
         "finding_review_status", "finding_review_comment", "confidence_user",
-        "created_at", "updated_at",
+        "created_at", "updated_at", "research_areas",
     ])
     for r in rows:
         writer.writerow([
@@ -231,6 +267,7 @@ def export_matrix_csv(rows: list[MatrixRow]) -> str:
             r.validation_score if r.validation_score is not None else "",
             r.finding_review_status or "", _san(r.finding_review_comment),
             r.confidence_user or "", r.created_at or "", r.updated_at or "",
+            _san(";".join(ra["title"] for ra in r.research_areas)),
         ])
     return buf.getvalue()
 

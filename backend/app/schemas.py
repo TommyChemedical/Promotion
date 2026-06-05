@@ -211,6 +211,7 @@ class MatrixRow(BaseModel):
     notes_count: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    research_areas: list[dict] = []
 
 
 class MatrixFilters(BaseModel):
@@ -224,6 +225,9 @@ class MatrixFilters(BaseModel):
     only_reviewed: bool = False
     only_unreviewed: bool = False
     source_id: Optional[int] = None
+    research_area_id: Optional[int] = None
+    relation_type: Optional[str] = None
+    relevance: Optional[str] = None
     sort_by: str = "updated_at"
     sort_order: str = "desc"
     limit: int = Field(100, ge=1, le=500)
