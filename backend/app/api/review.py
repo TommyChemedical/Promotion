@@ -7,13 +7,37 @@ from app.models import Source, Summary, Finding
 from app.schemas import (
     ReviewUpdateRequest, ReviewableSummaryResponse, ReviewableFindingResponse,
     SourceReviewResponse, EvidenceValidationResponse, EvidenceValidationResult,
-    ValidationStatus,
+    ValidationStatus, ValidationMethod,
 )
 from app.services.evidence_service import validate_finding_evidence, get_page_preview
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/review", tags=["review"])
+
+
+def _finding_response(f: Finding, db: Session) -> ReviewableFindingResponse:
+    preview = get_page_preview(f.source_id, f.page_start, db, f.evidence_quote or "")
+    return ReviewableFindingResponse(
+        id=f.id,
+        claim=f.claim,
+        evidence_text=f.evidence_text or "",
+        evidence_quote=f.evidence_quote or "",
+        page_start=f.page_start,
+        page_end=f.page_end,
+        confidence=f.confidence or "low",
+        validation_status=ValidationStatus(f.validation_status or "no_evidence"),
+        validation_method=ValidationMethod(f.validation_method or "none"),
+        validation_score=f.validation_score or 0.0,
+        validated_at=f.validated_at,
+        review_status=f.review_status or "unreviewed",
+        review_comment=f.review_comment or "",
+        reviewed_at=f.reviewed_at,
+        reviewed_by=f.reviewed_by,
+        confidence_user=f.confidence_user,
+        page_preview=preview,
+        created_at=f.created_at,
+    )
 
 
 @router.get("/sources/{source_id}", response_model=SourceReviewResponse)
@@ -39,31 +63,10 @@ def get_source_review(source_id: int, db: Session = Depends(get_db)):
     if summary:
         summary_resp = ReviewableSummaryResponse.model_validate(summary)
 
-    finding_resps = []
-    for f in findings:
-        preview = get_page_preview(source_id, f.page_number, db, f.evidence_quote or "")
-        resp = ReviewableFindingResponse(
-            id=f.id,
-            claim=f.claim,
-            evidence_text=f.evidence_text or "",
-            evidence_quote=f.evidence_quote or "",
-            page_number=f.page_number,
-            confidence=f.confidence or "low",
-            validation_status=ValidationStatus(f.validation_status or "no_evidence"),
-            review_status=f.review_status or "unreviewed",
-            review_comment=f.review_comment or "",
-            reviewed_at=f.reviewed_at,
-            reviewed_by=f.reviewed_by,
-            confidence_user=f.confidence_user,
-            page_preview=preview,
-            created_at=f.created_at,
-        )
-        finding_resps.append(resp)
-
     return SourceReviewResponse(
         source_id=source_id,
         summary=summary_resp,
-        findings=finding_resps,
+        findings=[_finding_response(f, db) for f in findings],
     )
 
 
@@ -96,24 +99,7 @@ def patch_finding_review(finding_id: int, body: ReviewUpdateRequest, db: Session
     finding.reviewed_by = "local_user"
     db.commit()
     db.refresh(finding)
-
-    preview = get_page_preview(finding.source_id, finding.page_number, db, finding.evidence_quote or "")
-    return ReviewableFindingResponse(
-        id=finding.id,
-        claim=finding.claim,
-        evidence_text=finding.evidence_text or "",
-        evidence_quote=finding.evidence_quote or "",
-        page_number=finding.page_number,
-        confidence=finding.confidence or "low",
-        validation_status=ValidationStatus(finding.validation_status or "no_evidence"),
-        review_status=finding.review_status or "unreviewed",
-        review_comment=finding.review_comment or "",
-        reviewed_at=finding.reviewed_at,
-        reviewed_by=finding.reviewed_by,
-        confidence_user=finding.confidence_user,
-        page_preview=preview,
-        created_at=finding.created_at,
-    )
+    return _finding_response(finding, db)
 
 
 @router.post("/source/{source_id}/validate-evidence", response_model=EvidenceValidationResponse)
@@ -125,11 +111,14 @@ def validate_all_evidence(source_id: int, db: Session = Depends(get_db)):
     findings = db.query(Finding).filter_by(source_id=source_id).all()
     results = []
     for f in findings:
-        status = validate_finding_evidence(f, db)
-        f.validation_status = status
+        result = validate_finding_evidence(f, db)
+        f.validation_status = result.status
+        f.validation_method = result.method
+        f.validation_score = result.score
+        f.validated_at = datetime.utcnow()
         results.append(EvidenceValidationResult(
             finding_id=f.id,
-            validation_status=ValidationStatus(status),
+            validation_status=ValidationStatus(result.status),
         ))
 
     db.commit()

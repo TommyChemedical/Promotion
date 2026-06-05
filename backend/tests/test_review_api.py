@@ -66,6 +66,7 @@ def review_client(tmp_path, monkeypatch):
             evidence_text="significant reduction in pain",
             evidence_quote="significantly reduced pain scores",
             page_number=1,
+            page_start=1,
             confidence="high",
             validation_status="evidence_found",
         )
@@ -158,5 +159,5 @@ def test_validate_evidence_endpoint(review_client):
     assert len(data["results"]) == 1
     assert data["results"][0]["finding_id"] == finding_id
     assert data["results"][0]["validation_status"] in (
-        "evidence_found", "evidence_not_found", "no_evidence"
+        "evidence_found", "evidence_not_found", "no_evidence", "invalid_page"
     )

@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -140,11 +141,16 @@ def summarize_source(source_id: int, db: Session = Depends(get_db)):
             evidence_text=kr.get("evidence_text", ""),
             evidence_quote=kr.get("evidence_quote", ""),
             page_number=kr.get("page_number"),
+            page_start=kr.get("page_number"),
             confidence=kr.get("confidence", "low"),
         )
         db.add(finding)
-        db.flush()  # get finding.id assigned before validation query
-        finding.validation_status = validate_finding_evidence(finding, db)
+        db.flush()
+        result = validate_finding_evidence(finding, db)
+        finding.validation_status = result.status
+        finding.validation_method = result.method
+        finding.validation_score = result.score
+        finding.validated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(summary)

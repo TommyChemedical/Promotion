@@ -110,6 +110,14 @@ class ValidationStatus(str, Enum):
     no_evidence = "no_evidence"
     evidence_found = "evidence_found"
     evidence_not_found = "evidence_not_found"
+    invalid_page = "invalid_page"
+
+
+class ValidationMethod(str, Enum):
+    none = "none"
+    exact = "exact"
+    fragment = "fragment"
+    fuzzy = "fuzzy"
 
 
 class ReviewUpdateRequest(BaseModel):
@@ -141,9 +149,13 @@ class ReviewableFindingResponse(BaseModel):
     claim: str
     evidence_text: str
     evidence_quote: str
-    page_number: Optional[int] = None
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
     confidence: str
     validation_status: ValidationStatus
+    validation_method: ValidationMethod = ValidationMethod.none
+    validation_score: float = 0.0
+    validated_at: Optional[datetime] = None
     review_status: ReviewStatus
     review_comment: str
     reviewed_at: Optional[datetime] = None

@@ -242,5 +242,5 @@ def test_summarize_auto_validates_evidence(client_with_source):
         from app.models import Finding
         findings = session.query(Finding).filter_by(source_id=source_id).all()
     assert len(findings) == 1
-    assert findings[0].validation_status in ("evidence_found", "evidence_not_found", "no_evidence")
+    assert findings[0].validation_status in ("evidence_found", "evidence_not_found", "no_evidence", "invalid_page")
     assert findings[0].evidence_quote == "X causes Y in clinical trials"

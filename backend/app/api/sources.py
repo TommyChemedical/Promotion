@@ -124,6 +124,7 @@ def add_finding(source_id: int, body: FindingCreate, db: Session = Depends(get_d
     if not source:
         raise HTTPException(404, "Quelle nicht gefunden")
     finding = Finding(source_id=source_id, **body.model_dump())
+    finding.page_start = finding.page_number  # keep page_start in sync
     db.add(finding)
     db.commit()
     db.refresh(finding)
