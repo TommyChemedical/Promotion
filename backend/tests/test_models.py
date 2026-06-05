@@ -83,7 +83,8 @@ def test_finding_has_review_and_evidence_columns():
     cols = {c["name"] for c in inspect(engine).get_columns("findings")}
     for col in ("evidence_quote", "validation_status", "review_status",
                 "review_comment", "reviewed_at", "reviewed_by",
-                "confidence_user", "page_end"):
+                "confidence_user", "page_end", "page_start",
+                "validation_method", "validation_score", "validated_at"):
         assert col in cols, f"Missing column: {col}"
 
 

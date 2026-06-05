@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -93,6 +93,10 @@ class Finding(Base):
     evidence_quote = Column(Text, default="")
     page_number = Column(Integer, nullable=True)
     page_end = Column(Integer, nullable=True)
+    page_start = Column(Integer, nullable=True)
+    validation_method = Column(String, nullable=False, default="none")
+    validation_score = Column(Float, nullable=False, default=0.0)
+    validated_at = Column(DateTime, nullable=True)
     relevance = Column(Text, default="")
     confidence = Column(String, default="low")
     validation_status = Column(String, default="no_evidence")

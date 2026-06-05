@@ -50,6 +50,10 @@ def _run_migrations():
         ("summaries", "reviewed_at DATETIME"),
         ("summaries", "reviewed_by TEXT"),
         ("summaries", "confidence_user INTEGER"),
+        ("findings", "page_start INTEGER"),
+        ("findings", "validation_method TEXT NOT NULL DEFAULT 'none'"),
+        ("findings", "validation_score REAL NOT NULL DEFAULT 0.0"),
+        ("findings", "validated_at DATETIME"),
     ]
     with engine.connect() as conn:
         for table, col_def in new_columns:
@@ -58,4 +62,7 @@ def _run_migrations():
             except OperationalError as e:
                 if "duplicate column name" not in str(e).lower():
                     raise
+        conn.execute(text(
+            "UPDATE findings SET page_start = page_number WHERE page_start IS NULL"
+        ))
         conn.commit()
