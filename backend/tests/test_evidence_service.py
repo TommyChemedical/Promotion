@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from app.models import Base, Finding, DocumentText, Source
-from app.services.evidence_service import validate_finding_evidence
+from app.services.evidence_service import validate_finding_evidence, ValidationResult
 
 
 @pytest.fixture
@@ -35,57 +35,86 @@ def _finding(source_id, quote, page=1):
         source_id=source_id,
         claim="test claim",
         evidence_quote=quote,
-        page_number=page,
+        page_start=page,
     )
 
 
 def test_no_evidence_quote(db_session):
     session, source_id = db_session
     f = _finding(source_id, "")
-    assert validate_finding_evidence(f, session) == "no_evidence"
-
-
-def test_exact_match(db_session):
-    session, source_id = db_session
-    f = _finding(source_id, "significant reduction in pain scores")
-    assert validate_finding_evidence(f, session) == "evidence_found"
-
-
-def test_whitespace_normalised(db_session):
-    session, source_id = db_session
-    f = _finding(source_id, "significant  reduction\nin pain  scores")
-    assert validate_finding_evidence(f, session) == "evidence_found"
-
-
-def test_fuzzy_word_overlap(db_session):
-    session, source_id = db_session
-    # 4 of 5 words match (80% overlap) — should still be found
-    f = _finding(source_id, "significant reduction pain scores patients")
-    assert validate_finding_evidence(f, session) == "evidence_found"
-
-
-def test_evidence_not_found(db_session):
-    session, source_id = db_session
-    f = _finding(source_id, "quantum entanglement disproves gravity completely")
-    assert validate_finding_evidence(f, session) == "evidence_not_found"
-
-
-def test_wrong_page_number(db_session):
-    session, source_id = db_session
-    f = _finding(source_id, "significant reduction in pain scores", page=99)
-    assert validate_finding_evidence(f, session) == "evidence_not_found"
-
-
-def test_none_page_number(db_session):
-    session, source_id = db_session
-    f = _finding(source_id, "significant reduction in pain scores", page=None)
-    assert validate_finding_evidence(f, session) == "evidence_not_found"
+    result = validate_finding_evidence(f, session)
+    assert result.status == "no_evidence"
+    assert result.method == "none"
 
 
 def test_whitespace_only_quote(db_session):
     session, source_id = db_session
     f = _finding(source_id, "   ")
-    assert validate_finding_evidence(f, session) == "no_evidence"
+    result = validate_finding_evidence(f, session)
+    assert result.status == "no_evidence"
+
+
+def test_none_page_returns_invalid_page(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant reduction in pain scores", page=None)
+    result = validate_finding_evidence(f, session)
+    assert result.status == "invalid_page"
+
+
+def test_zero_page_returns_invalid_page(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant reduction in pain scores", page=0)
+    result = validate_finding_evidence(f, session)
+    assert result.status == "invalid_page"
+
+
+def test_missing_page_returns_invalid_page(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant reduction in pain scores", page=99)
+    result = validate_finding_evidence(f, session)
+    assert result.status == "invalid_page"
+
+
+def test_exact_match(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant reduction in pain scores")
+    result = validate_finding_evidence(f, session)
+    assert result.status == "evidence_found"
+    assert result.method == "exact"
+    assert result.score == 1.0
+
+
+def test_whitespace_normalised(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant  reduction\nin pain  scores")
+    result = validate_finding_evidence(f, session)
+    assert result.status == "evidence_found"
+    assert result.method == "exact"
+
+
+def test_evidence_not_found(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "quantum entanglement disproves gravity completely")
+    result = validate_finding_evidence(f, session)
+    assert result.status == "evidence_not_found"
+
+
+def test_validation_result_has_score(db_session):
+    session, source_id = db_session
+    f = _finding(source_id, "significant reduction in pain scores")
+    result = validate_finding_evidence(f, session)
+    assert isinstance(result.score, float)
+    assert 0.0 <= result.score <= 1.0
+
+
+def test_fragment_match(db_session):
+    """Two long clauses, both present → fragment match."""
+    session, source_id = db_session
+    # Both clauses appear in the page text
+    quote = "significant reduction in pain scores compared to control, all patients received informed consent"
+    f = _finding(source_id, quote)
+    result = validate_finding_evidence(f, session)
+    assert result.status == "evidence_found"
 
 
 def test_page_preview_no_evidence_quote(db_session):
@@ -93,7 +122,7 @@ def test_page_preview_no_evidence_quote(db_session):
     from app.services.evidence_service import get_page_preview
     preview = get_page_preview(source_id, 1, session, evidence_quote="", max_len=50)
     assert len(preview) <= 50
-    assert preview != ""  # page 1 exists, should return start of text
+    assert preview != ""
 
 
 def test_page_preview_with_quote(db_session):
