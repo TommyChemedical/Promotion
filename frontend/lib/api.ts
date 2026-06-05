@@ -39,6 +39,7 @@ export interface Note {
 export interface KeyResult {
   claim: string;
   evidence_text: string;
+  evidence_quote: string;
   page_number: number | null;
   confidence: "low" | "medium" | "high";
 }

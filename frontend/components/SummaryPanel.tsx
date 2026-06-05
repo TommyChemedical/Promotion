@@ -112,11 +112,16 @@ export function SummaryPanel({ sourceId, initialSummaries }: Props) {
                       </span>
                       <span className="text-gray-800">{r.claim}</span>
                     </div>
-                    {r.evidence_text && (
+                    {r.evidence_quote && (
                       <blockquote className="mt-1 pl-2 border-l border-gray-200 text-gray-500 italic text-xs">
-                        „{r.evidence_text}"
+                        „{r.evidence_quote}"
                         {r.page_number ? ` (S. ${r.page_number})` : ""}
                       </blockquote>
+                    )}
+                    {r.evidence_text && (
+                      <p className="mt-0.5 pl-2 text-gray-400 text-xs">
+                        {r.evidence_text}
+                      </p>
                     )}
                   </li>
                 ))}
